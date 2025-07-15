@@ -1,4 +1,3 @@
-# Gracias al aporte de la profesora Turbina todos los integrantes del equipo estamos comenzando a planear nuestros cortos y rapidos suicidios. Muchas gracias por su atencion 😁👍
 
 ## Index.html
 
