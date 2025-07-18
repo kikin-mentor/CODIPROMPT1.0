@@ -3,7 +3,7 @@ import web
 urls = (
     '/', 'Index',
     '/registro', 'Registro',
-    '/inicio-sesion', 'InicioSesion',
+    '/inicio_sesion', 'InicioSesion',
     '/static/(.*)', 'Static'
 )
 
@@ -19,7 +19,7 @@ class Registro:
 
 class InicioSesion:
     def GET(self):
-        return render['inicio-sesion']()
+        return render.inicio_sesion()
 
 class Static:
     def GET(self, file):
