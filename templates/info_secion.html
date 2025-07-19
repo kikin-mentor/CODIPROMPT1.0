@@ -1,3 +1,4 @@
+$def with ()
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -52,6 +53,13 @@
     header button:hover {
       background: #e0e0e0;
       transform: scale(1.05);
+    }
+
+    header div img{
+      width: 40px;
+      height: 40px;
+      padding-right: 20px;
+      cursor: pointer;
     }
 
     .main-content {
@@ -132,8 +140,9 @@
   <header>
     <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
     <div>
-      <a href="/registro"><button>Registrarse</button></a>
-      <a href="/inicio_sesion"><button>Iniciar sesión</button></a>
+      <a href="/perfil_user"><img src="../static/icons/user_white_light.png" alt="user-icon"></a>
+      <!--<a href="/registro"><button>Registrarse</button></a>
+      <a href="/inicio_sesion"><button>Iniciar sesión</button></a> -->
     </div>
   </header>
 

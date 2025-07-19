@@ -4,6 +4,8 @@ urls = (
     '/', 'Index',
     '/registro', 'Registro',
     '/inicio_sesion', 'InicioSesion',
+    '/info_secion','InfoSecion',
+    '/perfil_user','PerfilUser',
     '/static/(.*)', 'Static'
 )
 
@@ -20,6 +22,14 @@ class Registro:
 class InicioSesion:
     def GET(self):
         return render.inicio_sesion()
+
+class InfoSecion:
+    def GET(self):
+        return render.info_secion()
+
+class PerfilUser:
+    def GET(self):
+        return render.perfil_user()
 
 class Static:
     def GET(self, file):

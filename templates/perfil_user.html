@@ -1,0 +1,198 @@
+$def with ()
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - CODIPROMPT</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #120c2b, #6d8aa9);
+            color: #fff;
+            text-align: center;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 98%;
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .logo {
+            height: 100px;
+        }
+
+        header button {
+            width: 120px;
+            height: 30px;
+            margin-left: 10px;
+            margin-right: 20px;
+            font-size: 12px;
+            padding: 8px 16px;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        header button:hover {
+            background: #e0e0e0;
+            transform: scale(1.05);
+        }
+        header div img{
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 20px;
+        }
+        .profile-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            width: 300px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .profile-picture {
+            width: 80px;
+            height: 80px;
+            background-color: #ccc;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .profile-picture img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .camera-icon {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .user-name {
+            margin-top: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-change {
+            background-color: #2c3e50;
+            color: #fff;
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
+        <div>
+            <a href="/templates/perfil_user.html"><img src="../static/icons/user_white_light.png" alt="user-icon"></a>
+        </div>
+    </header>
+    <div class="profile-container">
+        <div class="profile-picture">
+            <img src="../static/icons/user_white_light.png" alt="Perfil-User">
+            <div class="camera-icon">
+                📷
+            </div>
+        </div>
+        <div class="user-name">Usuario_1</div>
+
+        <div class="form-group">
+            <label for="nombre">Cambiar Nombre:</label>
+            <input type="text" id="nombre" value="Usuario_1" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="estado">Cambiar Estado:</label>
+            <input type="text" id="estado" value="Activo" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="estadisticas">Estadísticas cada:</label>
+            <input type="text" id="estadisticas" value="Mes" readonly>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-change">Cambiar Contraseña</button>
+            <button class="btn btn-delete">Borrar Cuenta</button>
+        </div>
+
+        <script>
+            document.querySelector('.btn-change').addEventListener('click', function() {
+                alert('Funcionalidad de cambio de contraseña no implementada.');
+            });
+
+            document.querySelector('.btn-delete').addEventListener('click', function() {
+                if (confirm('¿Estás seguro de que quieres borrar tu cuenta?')) {
+                    alert('Cuenta borrada.');
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>
