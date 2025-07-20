@@ -5,6 +5,7 @@ urls = (
     '/registro', 'Registro',
     '/inicio_sesion', 'InicioSesion',
     '/info_secion','InfoSecion',
+    '/leccion_rapida','LeccionRapida',
     '/perfil_user','PerfilUser',
     '/static/(.*)', 'Static'
 )
@@ -26,6 +27,10 @@ class InicioSesion:
 class InfoSecion:
     def GET(self):
         return render.info_secion()
+    
+class LeccionRapida:
+    def GET(self):
+        return render.leccion_rapida()
 
 class PerfilUser:
     def GET(self):

@@ -4,6 +4,7 @@ $def with ()
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
     <title>Mi Perfil - CODIPROMPT</title>
     <style>
         body {
@@ -53,13 +54,10 @@ $def with ()
             background: #e0e0e0;
             transform: scale(1.05);
         }
-        header div img{
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-right: 20px;
-        }
         .profile-container {
+            margin-top: 180px;
+            margin-left: 35vw;
+            margin-bottom: 80px;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
@@ -105,13 +103,40 @@ $def with ()
             text-align: left;
         }
 
+        .form-group #opt_est{
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .form-group .opt{
+            /* background-color: rgba(255, 255, 255, 0.3);  No compatible con la mayoria de navegadores por la personalizacion de un option -> select*/
+            color: #000;
+        }
+
+        .form-group #opt_esta{
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .form-group #opt_esta .esta{
+            color: #000;
+        }
+
         .form-group label {
             display: block;
             margin-bottom: 5px;
         }
 
         .form-group input {
-            width: 100%;
+            width: 95%;
             padding: 8px;
             border-radius: 5px;
             border: none;
@@ -149,9 +174,6 @@ $def with ()
 <body>
     <header>
         <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
-        <div>
-            <a href="/templates/perfil_user.html"><img src="../static/icons/user_white_light.png" alt="user-icon"></a>
-        </div>
     </header>
     <div class="profile-container">
         <div class="profile-picture">
@@ -164,17 +186,28 @@ $def with ()
 
         <div class="form-group">
             <label for="nombre">Cambiar Nombre:</label>
-            <input type="text" id="nombre" value="Usuario_1" readonly>
+            <input type="text" id="nombre" value="Usuario_1">
         </div>
 
         <div class="form-group">
             <label for="estado">Cambiar Estado:</label>
-            <input type="text" id="estado" value="Activo" readonly>
+            <!-- <input type="text" id="estado" value="Activo" readonly> -->
+            <select id="opt_esta" name="" id="">
+                <option class="esta" value="estado">Selecciona el estado</option>
+                <option class="esta" value="ena">Activo</option>
+                <option class="esta" value="dis">Inactivo</option>
+            </select>
         </div>
 
         <div class="form-group">
             <label for="estadisticas">Estadísticas cada:</label>
-            <input type="text" id="estadisticas" value="Mes" readonly>
+            <!-- <input type="text" id="estadisticas" value="Mes" readonly> -->
+            <select class="opciones_est" id="opt_est">
+                <option value="optio">Selecciona un periodo de tiempo</option>
+                <option class="opt" value="semana">Semana</option>
+                <option class="opt" value="mes">Mes</option>
+                <option class="opt" value="anio">Año</option>
+            </select>
         </div>
 
         <div class="buttons">
