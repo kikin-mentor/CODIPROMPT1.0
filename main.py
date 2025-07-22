@@ -22,6 +22,14 @@ urls = (
     '/static/(.*)', 'Static',
     '/cambiarcontraseña', 'cambiarcontraseña',
     '/actividad1', 'actividad1',
+    '/actividad2', 'actividad2',
+    '/actividad3', 'actividad3',
+    '/actividad4', 'actividad4',
+    '/actividad5', 'actividad5',
+    '/actividad6', 'actividad6',
+    '/actividad7', 'actividad7',
+    '/actividad8', 'actividad8',
+    '/actividad9', 'actividad9',
 )
 
 render = web.template.render('templates')
@@ -209,9 +217,41 @@ class cambiarcontraseña:
             return web.seeother("/inicio_sesion")
         except Exception as e:
             return render.cambiar_contraseña(error=f"Error al cambiar contraseña: {e}")
+
 class actividad1:
     def GET(self):
         return render.actividad1()
+class actividad2:
+    def GET(self):
+        return render.actividad2()
+
+class actividad3:
+    def GET(self):
+        return render.actividad3()
+
+class actividad4:
+    def GET(self):
+        return render.actividad4()
+
+class actividad5:
+    def GET(self):
+        return render.actividad5()
+
+class actividad6:
+    def GET(self):
+        return render.actividad6()
+
+class actividad7:
+    def GET(self):
+        return render.actividad7()
+
+class actividad8:
+    def GET(self):
+        return render.actividad8()
+
+class actividad9:
+    def GET(self):
+        return render.actividad9()
 
 if __name__ == "__main__":
     app = web.application(urls, globals())
