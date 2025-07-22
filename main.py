@@ -2,6 +2,7 @@ import web
 import sqlite3
 import re
 
+
 urls = (
     '/', 'Index',
     '/registro', 'Registro',
@@ -30,8 +31,9 @@ urls = (
     '/actividad7', 'actividad7',
     '/actividad8', 'actividad8',
     '/actividad9', 'actividad9',
+    '/evaluador_codigo', 'EvaluadorCodigo',
 )
-
+from evaluador_codigo import EvaluadorCodigo
 render = web.template.render('templates')
 
 class Index:

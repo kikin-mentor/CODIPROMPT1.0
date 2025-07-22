@@ -1,3 +1,4 @@
+$def with (resultado=None, codigo_enviado="")
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -125,14 +126,24 @@
 <body>
 <header>
     <h2>Actividad: Estructura</h2>
-    <div><img src="/static/logo.png" alt="icono"></div>
+    <div><img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="icono"></div>
 </header>
 <div class="main-content">
     <div class="section">
         <h3>Descripción de la actividad</h3>
         <p>Esta es la actividad correspondiente al archivo <strong>estructura.html</strong>. Lee cuidadosamente la descripción completa en la guía para realizarla correctamente.</p>
         <p>A continuación puedes escribir tu solución en HTML:</p>
-        <textarea placeholder="Escribe aquí tu código..."></textarea>
+        
+    <form method="post">
+      <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
+      <br>
+      <button type="submit">Evaluar mi código</button>
+    </form>
+
+    $if resultado:
+      <div class="section">
+        <h3>🧠 Retroalimentación del evaluador</h3>
+        <pre>$resultado</pre>
     </div>
 </div>
 <footer>
