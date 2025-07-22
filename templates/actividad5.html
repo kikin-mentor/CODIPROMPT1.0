@@ -4,9 +4,8 @@ $def with (resultado=None, codigo_enviado="")
 <head>
     <meta charset="UTF-8">
     <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
-    <title>Actividad: Tabla</title>
+    <title>Actividad: Estructura</title>
     <style>
-    
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -50,7 +49,7 @@ $def with (resultado=None, codigo_enviado="")
       background: #e0e0e0;
       transform: scale(1.05);
     }
-    header div img{
+    header div img {
       width: 40px;
       height: 40px;
       padding-right: 20px;
@@ -59,14 +58,6 @@ $def with (resultado=None, codigo_enviado="")
     .main-content {
       margin-top: 140px;
       padding: 20px;
-    }
-    h1 {
-      font-size: 2em;
-      margin-bottom: 30px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
     }
     .section {
       margin: 30px auto;
@@ -77,72 +68,90 @@ $def with (resultado=None, codigo_enviado="")
       padding: 20px;
       border-radius: 10px;
     }
-    ul {
-      padding-left: 20px;
+    h1, h2, h3 {
+      margin-bottom: 20px;
     }
-    li {
-      margin-bottom: 10px;
+    textarea {
+      width: 98%;
+      height: 400px;
+      font-size: 16px;
+      padding: 10px;
+      resize: none;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #222;
+      color: #fff;
     }
-    .video-placeholder {
-      margin: 20px auto;
-      width: 80%;
-      max-width: 600px;
-      height: 150px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ccc;
-    }
-    .lessons {
-      display: flex;
-      justify-content: center;
-      gap: 50px;
-      margin: 40px 0;
-    }
-    .lessons a{
-      text-decoration: none;
-      color: inherit;
-    }
-    .lesson-card {
-      background-color: rgba(255, 255, 255, 0.15);
-      padding: 20px 40px;
-      border-radius: 10px;
+    button[type="submit"] {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #00c3ff;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
       cursor: pointer;
-      transition: all 0.3s ease;
     }
-    .lesson-card:hover {
-      background-color: rgba(255, 255, 255, 0.25);
-      transform: scale(1.05);
+    button[type="submit"]:hover {
+      background-color: #0099cc;
+    }
+    pre {
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 20px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      color: #fff;
     }
     footer {
       margin: 40px auto 20px;
       font-size: 0.9em;
       color: #ccc;
     }
-
     </style>
 </head>
 <body>
 <header>
-    <h2>Actividad: Tabla</h2>
-    <div><img src="/static/logo.png" alt="icono"></div>
+    <h2>Actividad: Estructura</h2>
+    <div><img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="icono"></div>
 </header>
 <div class="main-content">
+<div class="section">
     <div class="section">
-        <h3>Descripción de la actividad</h3>
-        <p>Esta es la actividad correspondiente al archivo <strong>tabla.html</strong>. Lee cuidadosamente la descripción completa en la guía para realizarla correctamente.</p>
-        <p>A continuación puedes escribir tu solución en HTML:</p>
-       
-    <form method="post">
-      <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
-      <br>
-      <button type="submit">Evaluar mi código</button>
-    </form>
+  <h3>📄 Instrucciones de la actividad</h3>
+  <p>
+    Diseña una tabla HTML que contenga la siguiente información:
+  </p>
+  <ul>
+    <li>📋 Usa una tabla con <code>border="1"</code>.</li>
+    <li>🧾 Encabezados de columna: <strong>Producto</strong>, <strong>Precio</strong> y <strong>Cantidad</strong>.</li>
+    <li>📦 Agrega 3 filas con diferentes productos y sus datos respectivos.</li>
+    <li>➕ Añade una fila final con el total, dentro de la etiqueta <code>&lt;tfoot&gt;</code>.</li>
+    <li>🧩 Si lo deseas, usa <code>colspan</code> o <code>rowspan</code> para fusionar celdas donde tenga sentido.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>📘 Criterios de evaluación</h3>
+  <ul>
+    <li>✅ Usa correctamente la etiqueta <code>&lt;table border="1"&gt;</code>.</li>
+    <li>✅ Incluye los encabezados: <code>Producto</code>, <code>Precio</code> y <code>Cantidad</code>.</li>
+    <li>✅ Tiene al menos 3 filas de datos en el <code>&lt;tbody&gt;</code>.</li>
+    <li>✅ Usa <code>&lt;tfoot&gt;</code> para mostrar el total.</li>
+    <li>✅ Si se utiliza <code>colspan</code> o <code>rowspan</code>, están aplicados correctamente.</li>
+  </ul>
+</div>
+
+    <div class="section">
+        <h3>🧪 Escribe tu solución HTML aquí:</h3>
+        <form method="post">
+            <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
+            <br>
+            <button type="submit">Evaluar mi código</button>
+        </form>
+    </div>
 
     $if resultado:
-      <div class="section">
+    <div class="section">
         <h3>🧠 Retroalimentación del evaluador</h3>
         <pre>$resultado</pre>
     </div>

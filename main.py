@@ -1,7 +1,10 @@
 import web
 import sqlite3
 import re
-
+import os
+import requests
+import json
+from dotenv import load_dotenv  
 
 urls = (
     '/', 'Index',
@@ -31,10 +34,13 @@ urls = (
     '/actividad7', 'actividad7',
     '/actividad8', 'actividad8',
     '/actividad9', 'actividad9',
-    '/evaluador_codigo', 'EvaluadorCodigo',
+    '/api_chat', 'ApiChat',
 )
-from evaluador_codigo import EvaluadorCodigo
 render = web.template.render('templates')
+api_key = os.getenv("GROQ_API_KEY")
+modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # usa este modelo por defecto si no se encuentra la variable
+load_dotenv()  # Cargar variables de entorno desde .env
+
 
 class Index:
     def GET(self):
@@ -222,38 +228,616 @@ class cambiarcontraseña:
 
 class actividad1:
     def GET(self):
-        return render.actividad1()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
+    "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
+    "El documento comienza con <!DOCTYPE html>. Se utiliza <html lang=\"es\">. "
+    "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
+    "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
+)
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+        
 class actividad2:
     def GET(self):
-        return render.actividad2()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Escribe una noticia falsa (puede ser humorística, educativa o creativa). "
+    "Usa <h1> para el título de la noticia, <h2> para subtítulo o resumen, "
+    "<h3> para dividir secciones como 'Introducción', 'Desarrollo' y 'Conclusión'. "
+    "Utiliza <p> en cada sección y dentro de los párrafos incluye <strong> para advertencias, "
+    "<em> para opiniones o sentimientos, y <mark> para resaltar fechas o cifras."
+)
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad3:
     def GET(self):
-        return render.actividad3()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        
+        criterio = (
+            "Inserta una imagen (foto personal o avatar) usando <img> con los atributos alt, width y height. "
+            "Agrega un párrafo de bienvenida. Crea tres enlaces con <a>: "
+            "uno a un sitio externo, uno a una red social en una nueva pestaña (target=\"_blank\"), "
+            "y uno que lleve a otra sección de la misma página usando un id y href=\"#...\"."
+        )
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad4:
     def GET(self):
-        return render.actividad4()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Crea una lista desordenada (<ul>) con 4 cosas que usarías para acampar. "
+    "Agrega una lista ordenada (<ol>) con pasos para preparar tu platillo favorito. "
+    "Incluye una lista anidada con dos categorías principales: 'Tecnología' y 'Arte', "
+    "y debajo de cada una agrega subelementos."
+)
+
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad5:
     def GET(self):
-        return render.actividad5()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Diseña una tabla con los encabezados: Producto, Precio, Cantidad. "
+    "Agrega 3 filas con diferentes productos. Usa <tfoot> para incluir una fila final con el total. "
+    "Utiliza border=\"1\" y aplica colspan o rowspan si deseas fusionar celdas."
+)     
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad6:
     def GET(self):
-        return render.actividad6()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Incluye un formulario <form> con: "
+    "campo de texto para nombre completo (obligatorio, maxlength=\"40\"), "
+    "campo de correo electrónico (type=\"email\"), "
+    "campo de contraseña (type=\"password\", mínimo 6 caracteres), "
+    "comentarios con <textarea> y placeholder, y botón de envío. "
+    "Usa <label> para cada campo y enlázalo con su id."
+)
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad7:
     def GET(self):
-        return render.actividad7()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Dentro del <head>, agrega un bloque <style>. "
+    "Estiliza el fondo del body con un color claro, los títulos (h1, h2) con color azul y alineación centrada, "
+    "los párrafos con una fuente diferente y un tamaño de fuente mayor. "
+    "Aplica márgenes y padding para dar espacio entre los elementos."
+)
+
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad8:
     def GET(self):
-        return render.actividad8()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Escribe una página con: un <header> con el título del sitio, "
+    "una <nav> con una lista de navegación, un <main> con una <section> llamada 'Noticias' y dos <article>. "
+    "Cada <article> debe tener un título y un párrafo. "
+    "Agrega un <footer> con tu nombre y el año actual."
+)
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad9:
     def GET(self):
-        return render.actividad9()
+        return render.actividad1(resultado=None, codigo_enviado="")
+
+    def POST(self):
+        form = web.input(codigo_html="")
+        codigo = form.codigo_html.strip()
+
+        if not codigo:
+            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
+        # Cargar API Key y modelo desde .env
+        api_key1 = "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"
+        modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        criterio = (
+    "Inserta un reproductor de audio usando <audio> con el archivo musica.mp3. "
+    "Agrega un reproductor de video <video> con dimensiones personalizadas. "
+    "Incluye un iframe con un video de YouTube (usa el código de inserción). "
+    "Escribe un texto explicativo con <p> antes de cada elemento multimedia."
+)
+        if not api_key1:
+            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
+
+        payload = {
+            "model": modelo,
+            "messages": [
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key1}"
+                },
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            feedback = data["choices"][0]["message"]["content"]
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+
+        except Exception as e:
+            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+
+
+
+import os
+import json
+import requests
+import web
+import html  # Para escapar caracteres HTML
+
+class ApiChat:
+    def POST(self):
+        data = web.input()
+        mensaje_usuario = data.get("mensaje", "").strip()
+
+        # --- Comando especial /help ---
+        if mensaje_usuario.lower() == "/help":
+            guia = """
+🔧 Instrucciones para que tu solicitud funcione correctamente:
+
+Escribe tu idea de proyecto web respondiendo brevemente con las siguientes áreas:
+
+1. HTML: ¿Qué elementos deseas incluir? (ej. estructura semántica, uso de etiquetas como header, footer, main, etc.)
+2. CSS: ¿Qué tipo de estilo quieres? (ej. modo oscuro, centrado, grid, responsive...)
+3. JS: ¿Qué interacciones tendrá? (ej. validación, audio al hacer clic, sliders, conexión API...)
+4. Backend (opcional): ¿Vas a usar Flask o Django? ¿Qué rutas necesitas? ¿Requiere login, base de datos...?)
+
+🧠 Ejemplo de entrada correcta:
+
+HTML: Página con formulario de contacto que tenga campos para nombre, correo y mensaje. Debe estar dentro de una sección con main.
+CSS: Diseño responsivo con columnas y modo oscuro.
+JS: Validación de campos vacíos antes de enviar el formulario.
+Backend: Flask con ruta /contacto, almacenamiento en base de datos SQLite.
+"""
+            return json.dumps({"respuesta": html.escape(guia)})
+
+        # --- Validación de mensaje vacío ---
+        if not mensaje_usuario:
+            return json.dumps({"respuesta": "Por favor, escribe un mensaje o escribe /help para obtener instrucciones."})
+
+        try:
+            api_key = os.getenv("GROQ_API_KEY")
+            modelo  = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json"
+            }
+
+            # Prompt del sistema reforzado
+            prompt_sistema = (
+                "Eres un generador de PROMPTS técnicos para proyectos web. Tu tarea es analizar las respuestas del usuario y producir un PROMPT perfectamente estructurado.\n\n"
+                "🔴 MUY IMPORTANTE: NO debes generar código (ni HTML, ni CSS, ni JavaScript). No uses etiquetas como <div>, <audio>, etc.\n"
+                "🔴 No uses encabezados como 'Título', 'Configuración Final', 'Código' ni cierres con frases como '¡Listo!'.\n"
+                "🔴 RESPONDE SIEMPRE con las siguientes SEIS SECCIONES, estrictamente en este orden:\n\n"
+                "1. Descripción general del proyecto web.\n"
+                "2. Tecnologías seleccionadas (HTML, CSS, JS, Framework backend).\n"
+                "3. Estructura semántica y etiquetas clave.\n"
+                "4. Estilo visual (CSS, diseño responsivo, modo oscuro...).\n"
+                "5. Interactividad esperada (validación, modales, API).\n"
+                "6. Backend: framework elegido, estructura de rutas, manejo de datos, base de datos, seguridad.\n\n"
+                "✅ Cada sección debe comenzar con su número y título.\n"
+                "✅ Si alguna sección no aplica, escríbela igualmente y di 'No se requiere para este proyecto'.\n"
+                "✅ No inventes más secciones. No salgas del formato.\n\n"
+                "Ejemplo de entrada:\n"
+                "HTML: Página con formulario de contacto que tenga campos para nombre, correo y mensaje. Debe estar dentro de una sección con main.\n"
+                "CSS: Diseño responsivo con columnas y modo oscuro.\n"
+                "JS: Validación de campos vacíos antes de enviar el formulario.\n"
+                "Backend: Flask con ruta /contacto, almacenamiento en base de datos SQLite.\n\n"
+                "Comienza cuando recibas la entrada del usuario."
+            )
+
+            payload = {
+                "model": modelo,
+                "messages": [
+                    {"role": "system", "content": prompt_sistema},
+                    {"role": "user", "content": mensaje_usuario}
+                ],
+                "max_tokens": 4096,
+                "temperature": 0.3,
+                "top_p": 1.0,
+                "stop": None
+            }
+
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers, json=payload, timeout=30
+            )
+            r.raise_for_status()
+            data = r.json()
+            respuesta = data["choices"][0]["message"]["content"].strip()
+
+            # Verificar si fue truncada
+            finish_reason = data["choices"][0].get("finish_reason", "")
+            if finish_reason == "length":
+                respuesta += "\n\n⚠️ La respuesta fue truncada. Intenta dividir tu entrada o aumentar max_tokens."
+
+            # Escape para evitar ejecución como HTML en navegador
+            return json.dumps({"respuesta": html.escape(respuesta)})
+
+        except Exception as e:
+            return json.dumps({"respuesta": f"Error al procesar la solicitud: {e}"})
+
+
 
 if __name__ == "__main__":
     app = web.application(urls, globals())

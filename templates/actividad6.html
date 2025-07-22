@@ -4,9 +4,8 @@ $def with (resultado=None, codigo_enviado="")
 <head>
     <meta charset="UTF-8">
     <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
-    <title>Actividad: Formulario</title>
+    <title>Actividad: Estructura</title>
     <style>
-    
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -50,7 +49,7 @@ $def with (resultado=None, codigo_enviado="")
       background: #e0e0e0;
       transform: scale(1.05);
     }
-    header div img{
+    header div img {
       width: 40px;
       height: 40px;
       padding-right: 20px;
@@ -59,14 +58,6 @@ $def with (resultado=None, codigo_enviado="")
     .main-content {
       margin-top: 140px;
       padding: 20px;
-    }
-    h1 {
-      font-size: 2em;
-      margin-bottom: 30px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
     }
     .section {
       margin: 30px auto;
@@ -77,72 +68,92 @@ $def with (resultado=None, codigo_enviado="")
       padding: 20px;
       border-radius: 10px;
     }
-    ul {
-      padding-left: 20px;
+    h1, h2, h3 {
+      margin-bottom: 20px;
     }
-    li {
-      margin-bottom: 10px;
+    textarea {
+      width: 98%;
+      height: 400px;
+      font-size: 16px;
+      padding: 10px;
+      resize: none;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #222;
+      color: #fff;
     }
-    .video-placeholder {
-      margin: 20px auto;
-      width: 80%;
-      max-width: 600px;
-      height: 150px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ccc;
-    }
-    .lessons {
-      display: flex;
-      justify-content: center;
-      gap: 50px;
-      margin: 40px 0;
-    }
-    .lessons a{
-      text-decoration: none;
-      color: inherit;
-    }
-    .lesson-card {
-      background-color: rgba(255, 255, 255, 0.15);
-      padding: 20px 40px;
-      border-radius: 10px;
+    button[type="submit"] {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #00c3ff;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
       cursor: pointer;
-      transition: all 0.3s ease;
     }
-    .lesson-card:hover {
-      background-color: rgba(255, 255, 255, 0.25);
-      transform: scale(1.05);
+    button[type="submit"]:hover {
+      background-color: #0099cc;
+    }
+    pre {
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 20px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      color: #fff;
     }
     footer {
       margin: 40px auto 20px;
       font-size: 0.9em;
       color: #ccc;
     }
-
     </style>
 </head>
 <body>
 <header>
-    <h2>Actividad: Formulario</h2>
-    <div><img src="/static/logo.png" alt="icono"></div>
+    <h2>Actividad: Estructura</h2>
+    <div><img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="icono"></div>
 </header>
 <div class="main-content">
+<div class="section">
+<div class="section">
+  <h3>📄 Instrucciones de la actividad</h3>
+  <p>
+    Crea un formulario HTML que contenga los siguientes elementos:
+  </p>
+  <ul>
+    <li>👤 Un campo de texto para el <strong>nombre completo</strong>, con atributo <code>required</code> y <code>maxlength="40"</code>.</li>
+    <li>📧 Un campo para el <strong>correo electrónico</strong> usando <code>type="email"</code>.</li>
+    <li>🔒 Un campo para la <strong>contraseña</strong> usando <code>type="password"</code> con un mínimo de 6 caracteres (<code>minlength="6"</code>).</li>
+    <li>💬 Un área de <strong>comentarios</strong> con <code>&lt;textarea&gt;</code> y atributo <code>placeholder</code>.</li>
+    <li>📨 Un <strong>botón de envío</strong> con <code>&lt;button type="submit"&gt;</code>.</li>
+    <li>🏷️ Usa <code>&lt;label&gt;</code> correctamente para cada campo y enlázalo con su <code>id</code> mediante el atributo <code>for</code>.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>📘 Criterios de evaluación</h3>
+  <ul>
+    <li>✅ El campo de nombre es obligatorio y tiene <code>maxlength="40"</code>.</li>
+    <li>✅ El campo de correo usa <code>type="email"</code> correctamente.</li>
+    <li>✅ El campo de contraseña usa <code>type="password"</code> y <code>minlength="6"</code>.</li>
+    <li>✅ El área de comentarios tiene <code>placeholder</code> y está correctamente etiquetada.</li>
+    <li>✅ Todos los campos tienen <code>&lt;label&gt;</code> vinculados con <code>id</code> mediante <code>for</code>.</li>
+    <li>✅ El formulario incluye un botón de envío funcional.</li>
+  </ul>
+</div>
+
     <div class="section">
-        <h3>Descripción de la actividad</h3>
-        <p>Esta es la actividad correspondiente al archivo <strong>formulario.html</strong>. Lee cuidadosamente la descripción completa en la guía para realizarla correctamente.</p>
-        <p>A continuación puedes escribir tu solución en HTML:</p>
-        
-    <form method="post">
-      <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
-      <br>
-      <button type="submit">Evaluar mi código</button>
-    </form>
+        <h3>🧪 Escribe tu solución HTML aquí:</h3>
+        <form method="post">
+            <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
+            <br>
+            <button type="submit">Evaluar mi código</button>
+        </form>
+    </div>
 
     $if resultado:
-      <div class="section">
+    <div class="section">
         <h3>🧠 Retroalimentación del evaluador</h3>
         <pre>$resultado</pre>
     </div>

@@ -4,9 +4,8 @@ $def with (resultado=None, codigo_enviado="")
 <head>
     <meta charset="UTF-8">
     <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
-    <title>Actividad: Tarjeta</title>
+    <title>Actividad: Estructura</title>
     <style>
-    
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -50,7 +49,7 @@ $def with (resultado=None, codigo_enviado="")
       background: #e0e0e0;
       transform: scale(1.05);
     }
-    header div img{
+    header div img {
       width: 40px;
       height: 40px;
       padding-right: 20px;
@@ -59,14 +58,6 @@ $def with (resultado=None, codigo_enviado="")
     .main-content {
       margin-top: 140px;
       padding: 20px;
-    }
-    h1 {
-      font-size: 2em;
-      margin-bottom: 30px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
     }
     .section {
       margin: 30px auto;
@@ -77,75 +68,91 @@ $def with (resultado=None, codigo_enviado="")
       padding: 20px;
       border-radius: 10px;
     }
-    ul {
-      padding-left: 20px;
+    h1, h2, h3 {
+      margin-bottom: 20px;
     }
-    li {
-      margin-bottom: 10px;
+    textarea {
+      width: 98%;
+      height: 400px;
+      font-size: 16px;
+      padding: 10px;
+      resize: none;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #222;
+      color: #fff;
     }
-    .video-placeholder {
-      margin: 20px auto;
-      width: 80%;
-      max-width: 600px;
-      height: 150px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ccc;
-    }
-    .lessons {
-      display: flex;
-      justify-content: center;
-      gap: 50px;
-      margin: 40px 0;
-    }
-    .lessons a{
-      text-decoration: none;
-      color: inherit;
-    }
-    .lesson-card {
-      background-color: rgba(255, 255, 255, 0.15);
-      padding: 20px 40px;
-      border-radius: 10px;
+    button[type="submit"] {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #00c3ff;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
       cursor: pointer;
-      transition: all 0.3s ease;
     }
-    .lesson-card:hover {
-      background-color: rgba(255, 255, 255, 0.25);
-      transform: scale(1.05);
+    button[type="submit"]:hover {
+      background-color: #0099cc;
+    }
+    pre {
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 20px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      color: #fff;
     }
     footer {
       margin: 40px auto 20px;
       font-size: 0.9em;
       color: #ccc;
     }
-
     </style>
 </head>
 <body>
 <header>
-    <h2>Actividad: Tarjeta</h2>
-    <div><img src="/static/logo.png" alt="icono"></div>
+    <h2>Actividad: Estructura</h2>
+    <div><img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="icono"></div>
 </header>
 <div class="main-content">
+<div class="section">
     <div class="section">
-        <h3>Descripción de la actividad</h3>
-        <p>Esta es la actividad correspondiente al archivo <strong>tarjeta.html</strong>. Lee cuidadosamente la descripción completa en la guía para realizarla correctamente.</p>
-        <p>A continuación puedes escribir tu solución en HTML:</p>
+  <h3>📄 Instrucciones de la actividad</h3>
+  <p>
+    Crea una pequeña presentación personal en HTML. Incluye los siguientes elementos:
+  </p>
+  <ul>
+    <li>📷 Inserta una imagen (foto personal o avatar) usando <code>&lt;img&gt;</code>, con los atributos <code>alt</code>, <code>width</code> y <code>height</code>.</li>
+    <li>💬 Agrega un párrafo de bienvenida usando <code>&lt;p&gt;</code>.</li>
+    <li>🔗 Crea tres enlaces con <code>&lt;a&gt;</code>:
+      <ul>
+        <li>Un enlace a un sitio externo (por ejemplo, <a href="https://www.wikipedia.org" target="_blank">Wikipedia</a>).</li>
+        <li>Un enlace que abra una red social en una nueva pestaña (<code>target="_blank"</code>).</li>
+        <li>Un enlace que lleve a otra sección de la misma página (usando <code>id</code> y <code>href="#..."</code>).</li>
+      </ul>
+    </li>
+  </ul>
+</div>
 
-    <form method="post">
-      <textarea name="codigo_html" placeholder="Escribe aquí tu código HTML...">$codigo_enviado</textarea>
-      <br>
-      <button type="submit">Evaluar mi código</button>
-    </form>
-
+<div class="section">
+  <h3>📘 Criterios de evaluación</h3>
+  <ul>
+    <li>✅ Usa correctamente <code>&lt;img&gt;</code> con <code>alt</code>, <code>width</code> y <code>height</code>.</li>
+    <li>✅ Incluye un párrafo de bienvenida claro y bien redactado.</li>
+    <li>✅ Añade tres enlaces funcionales:
+      <ul>
+        <li>Uno a un sitio externo.</li>
+        <li>Uno a una red social que se abra en otra pestaña.</li>
+        <li>Uno que se desplace a otra parte de la misma página usando <code>id</code>.</li>
+      </ul>
+    </li>
+  </ul>
+</div>
     $if resultado:
-      <div class="section">
+    <div class="section">
         <h3>🧠 Retroalimentación del evaluador</h3>
         <pre>$resultado</pre>
-      </div>
+    </div>
 </div>
 <footer>
     Página generada automáticamente para actividades HTML.
