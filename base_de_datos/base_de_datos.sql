@@ -31,13 +31,11 @@ CREATE TABLE lecciones_completadas(
     estado TEXT NOT NULL,
     id_lenguaje TEXT NOT NULL,
     id_time INTEGER NOT NULL,
-    id_time_leccion INTEGER NOT NULL,
     FOREIGN KEY (id_actividad) REFERENCES actividades(id_actividad),
     FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
     FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion),
     FOREIGN KEY (id_lenguaje) REFERENCES lenguajes(id_lenguaje),
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario), 
-    FOREIGN KEY (id_time_leccion) REFERENCES tiempo_leccion(id_time_leccion)
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
 CREATE TABLE lenguajes (
@@ -62,7 +60,7 @@ CREATE TABLE tiempo_de_uso (
     id_usuario INTEGER NOT NULL,
     id_sesion INTEGER NOT NULL,
     minutos INTEGER NOT NULL,
-    fecha DATE DEFAULT CURRENT_DATE,
+    fecha_de_uso DATE DEFAULT CURRENT_DATE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_sesion) REFERENCES sesiones(id_sesion)
 );
@@ -83,7 +81,7 @@ CREATE TABLE resumen_diario (
     id_resumen INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
     fecha DATE DEFAULT CURRENT_DATE,
-    tiempo_total INTEGER NOT NULL,
+    id_time INTEGER NOT NULL,
     promedio_tiempo REAL,
     id_leccion_completada INTEGER NOT NULL,
     id_prompt INTEGER NOT NULL,
