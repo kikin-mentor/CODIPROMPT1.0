@@ -65,7 +65,7 @@ class Registro:
                         (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
-            return web.seeother("/inicio_sesion")  # Redirige a la página de inicio de sesión
+            return render.inicio_sesion() # Redirige a la página de inicio de sesión
         except sqlite3.IntegrityError as e:
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
@@ -105,7 +105,7 @@ class InicioSesion:
 
             if row and row[0] == password:
                 # session.usuario = usuario  # Si usas sesiones, inicialízalas correctamente
-                return f"Bienvenido, {usuario}"
+                return render.info_secion()
             else:
                 return render.inicio_sesion(error="usuario o contraseña incorrecta")
         except Exception as e:

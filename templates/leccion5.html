@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lección 5: Tablas HTML</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      color: #6a0dad;
+    }
+    pre {
+      background-color: #1e293b;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    code {
+      color: #a78bfa;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    .etiqueta {
+      color: #c084fc;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Lección 5: Tablas en HTML</h1>
+
+  <section>
+    <h2>📄 Ejemplo de tabla</h2>
+    <pre><code>
+<table border="1">
+  <caption>Lista de productos</caption>
+  <thead>
+    <tr>
+      <th>Producto</th>
+      <th>Precio</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Manzana</td>
+      <td>$10</td>
+    </tr>
+    <tr>
+      <td>Banana</td>
+      <td>$8</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>Total</td>
+      <td>$18</td>
+    </tr>
+  </tfoot>
+</table>
+    </code></pre>
+  </section>
+
+  <section>
+    <h2>🔍 Explicación de etiquetas</h2>
+    <p><span class="etiqueta">&lt;table&gt;</span>: Define la tabla.</p>
+    <p><span class="etiqueta">&lt;caption&gt;</span>: Título de la tabla.</p>
+    <p><span class="etiqueta">&lt;thead&gt;, &lt;tbody&gt;, &lt;tfoot&gt;</span>: Secciones de encabezado, cuerpo y pie.</p>
+    <p><span class="etiqueta">&lt;tr&gt;</span>: Fila de la tabla.</p>
+    <p><span class="etiqueta">&lt;th&gt;</span>: Celda de encabezado (negrita y centrado).</p>
+    <p><span class="etiqueta">&lt;td&gt;</span>: Celda normal de datos.</p>
+    <p><span class="etiqueta">border</span>: Define un borde visible. Mejor usar CSS para producción.</p>
+  </section>
+
+  <section>
+    <a href="index.html" style="color:#7dd3fc">⬅ Volver al índice</a>
+  </section>
+</body>
+</html>

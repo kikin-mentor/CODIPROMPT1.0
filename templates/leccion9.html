@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lección 9: Multimedia HTML5</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      color: #6a0dad;
+    }
+    pre {
+      background-color: #1e293b;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    code {
+      color: #c084fc;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    .etiqueta {
+      color: #a78bfa;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Lección 9: Multimedia en HTML5</h1>
+
+  <section>
+    <h2>📄 Audio, Video e Iframe</h2>
+    <pre><code>
+<audio controls>
+  <source src="musica.mp3" type="audio/mpeg">
+  Tu navegador no soporta el elemento de audio.
+</audio>
+
+<video width="320" height="240" controls>
+  <source src="video.mp4" type="video/mp4">
+  Tu navegador no soporta el elemento de video.
+</video>
+
+<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+        width="560" height="315" 
+        title="Video de YouTube"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+</iframe>
+    </code></pre>
+  </section>
+
+  <section>
+    <h2>🔍 Explicación de etiquetas</h2>
+    <p><span class="etiqueta">&lt;audio&gt;</span>: Inserta audio. Usa <code>controls</code> para mostrar el reproductor.</p>
+    <p><span class="etiqueta">&lt;video&gt;</span>: Inserta video. Atributos comunes: <code>width</code>, <code>height</code>, <code>controls</code>.</p>
+    <p><span class="etiqueta">&lt;source&gt;</span>: Define el archivo multimedia (audio/video).</p>
+    <p><span class="etiqueta">&lt;iframe&gt;</span>: Incrusta contenido externo, como videos o mapas.</p>
+    <p><span class="etiqueta">allowfullscreen</span>: Permite pantalla completa.</p>
+    <p><span class="etiqueta">title</span>: Descripción para accesibilidad.</p>
+  </section>
+
+  <section>
+    <a href="index.html" style="color:#7dd3fc">⬅ Volver al índice</a>
+  </section>
+</body>
+</html>

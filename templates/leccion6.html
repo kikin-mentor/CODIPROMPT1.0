@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lección 6: Formularios HTML</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      color: #204080;
+    }
+    pre {
+      background-color: #1e293b;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    code {
+      color: #60a5fa;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    .etiqueta {
+      color: #3b82f6;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Lección 6: Formularios HTML</h1>
+
+  <section>
+    <h2>📄 Ejemplo de formulario</h2>
+    <pre><code>
+<form action="/enviar" method="POST">
+  <label for="nombre">Nombre:</label>
+  <input type="text" id="nombre" name="nombre" required><br><br>
+
+  <label for="email">Correo electrónico:</label>
+  <input type="email" id="email" name="correo" required><br><br>
+
+  <label for="mensaje">Mensaje:</label><br>
+  <textarea id="mensaje" name="mensaje" rows="4" cols="40"></textarea><br><br>
+
+  <button type="submit">Enviar</button>
+</form>
+    </code></pre>
+  </section>
+
+  <section>
+    <h2>🔍 Explicación de etiquetas</h2>
+    <p><span class="etiqueta">&lt;form&gt;</span>: Crea un formulario. Usa atributos <code>action</code> y <code>method</code>.</p>
+    <p><span class="etiqueta">&lt;label&gt;</span>: Etiqueta descriptiva para un campo.</p>
+    <p><span class="etiqueta">&lt;input&gt;</span>: Campo de entrada. Usa <code>type</code> (text, email, etc).</p>
+    <p><span class="etiqueta">&lt;textarea&gt;</span>: Área de texto de varias líneas.</p>
+    <p><span class="etiqueta">&lt;button&gt;</span>: Botón para enviar el formulario.</p>
+    <p><span class="etiqueta">required</span>: Hace que el campo sea obligatorio.</p>
+    <p><span class="etiqueta">name</span>: Identificador del valor enviado.</p>
+  </section>
+
+  <section>
+    <a href="index.html" style="color:#7dd3fc">⬅ Volver al índice</a>
+  </section>
+</body>
+</html>

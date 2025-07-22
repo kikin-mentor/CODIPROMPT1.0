@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lección 8: HTML Semántico</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      color: #72004e;
+    }
+    pre {
+      background-color: #1e293b;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    code {
+      color: #f472b6;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    .etiqueta {
+      color: #f472b6;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Lección 8: HTML Semántico</h1>
+
+  <section>
+    <h2>📄 Ejemplo con estructura semántica</h2>
+    <pre><code>
+<header>
+  <h1>Mi Blog</h1>
+</header>
+
+<nav>
+  <ul>
+    <li><a href="#">Inicio</a></li>
+    <li><a href="#">Artículos</a></li>
+    <li><a href="#">Contacto</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section>
+    <h2>Últimas publicaciones</h2>
+    <article>
+      <h3>Artículo 1</h3>
+      <p>Contenido del artículo.</p>
+    </article>
+    <article>
+      <h3>Artículo 2</h3>
+      <p>Otro contenido.</p>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <p>© 2025 Mi Blog.</p>
+</footer>
+    </code></pre>
+  </section>
+
+  <section>
+    <h2>🔍 Explicación de etiquetas semánticas</h2>
+    <p><span class="etiqueta">&lt;header&gt;</span>: Encabezado general o de sección.</p>
+    <p><span class="etiqueta">&lt;nav&gt;</span>: Área de navegación.</p>
+    <p><span class="etiqueta">&lt;main&gt;</span>: Contenido principal del documento.</p>
+    <p><span class="etiqueta">&lt;section&gt;</span>: Agrupa contenido temáticamente.</p>
+    <p><span class="etiqueta">&lt;article&gt;</span>: Contenido independiente reutilizable.</p>
+    <p><span class="etiqueta">&lt;footer&gt;</span>: Pie de página.</p>
+  </section>
+
+  <section>
+    <a href="index.html" style="color:#7dd3fc">⬅ Volver al índice</a>
+  </section>
+</body>
+</html>
