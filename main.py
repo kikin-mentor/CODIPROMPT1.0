@@ -21,6 +21,7 @@ urls = (
     '/leccion_personalizada', 'LeccionPersonalizada',
     '/static/(.*)', 'Static',
     '/cambiarcontraseña', 'cambiarcontraseña',
+    '/actividad1', 'actividad1',
 )
 
 render = web.template.render('templates')
@@ -208,6 +209,9 @@ class cambiarcontraseña:
             return web.seeother("/inicio_sesion")
         except Exception as e:
             return render.cambiar_contraseña(error=f"Error al cambiar contraseña: {e}")
+class actividad1:
+    def GET(self):
+        return render.actividad1()
 
 if __name__ == "__main__":
     app = web.application(urls, globals())

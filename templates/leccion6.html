@@ -6,7 +6,7 @@
   <title>Lección 6: Formularios HTML</title>
   <style>
     body {
-      background-color: #0f172a;
+      background: linear-gradient(to bottom, #120c2b, #0d4177);
       color: #e2e8f0;
       font-family: Arial, sans-serif;
       padding: 2rem;
@@ -32,6 +32,28 @@
       color: #3b82f6;
       font-weight: bold;
     }
+     .lesson-card:hover {
+      background-color: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+ .lesson-card {
+      background-color: rgba(255, 255, 255, 0.15);
+      padding: 20px 40px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .lessons {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin: 40px 0;
+    }
+    .lessons a{
+      text-decoration: none;
+      color: inherit;
+    }
+
   </style>
 </head>
 <body>
@@ -65,9 +87,9 @@
     <p><span class="etiqueta">required</span>: Hace que el campo sea obligatorio.</p>
     <p><span class="etiqueta">name</span>: Identificador del valor enviado.</p>
   </section>
-
+ <a href="/actividad6"><div class="lesson-card">realizar actividad</div></a>
   <section>
-    <a href="index.html" style="color:#7dd3fc">⬅ Volver al índice</a>
+    <a href="/leccion_personalizada" style="color:#7dd3fc">⬅ Volver al índice</a>
   </section>
 </body>
 </html>
