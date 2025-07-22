@@ -21,7 +21,7 @@ urls = (
     '/leccion9', 'Leccion9',
     '/leccion_personalizada', 'LeccionPersonalizada',
     '/static/(.*)', 'Static',
-    '/cambiarcontraseña', 'cambiarcontraseña',
+    '/cambiar_contraseña', 'cambiarcontraseña',
     '/actividad1', 'actividad1',
     '/actividad2', 'actividad2',
     '/actividad3', 'actividad3',

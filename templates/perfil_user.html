@@ -10,7 +10,7 @@ $def with ()
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-             background: linear-gradient(to bottom,#120c2b,#0d4177) ;
+            background: linear-gradient(to bottom,#120c2b,#0d4177);
             color: #fff;
             text-align: center;
         }
@@ -32,7 +32,7 @@ $def with ()
         }
 
         .logo {
-            height: 100px;
+            height: 80px;
         }
 
         header button {
@@ -57,7 +57,7 @@ $def with ()
         .profile-container {
             margin-top: 180px;
             margin-left: 35vw;
-            margin-bottom: 80px;
+            margin-bottom: 68px;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
@@ -68,28 +68,40 @@ $def with ()
         }
 
         .profile-picture {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             background-color: #ccc;
             border-radius: 50%;
             margin: 0 auto;
             position: relative;
+            overflow: hidden;
         }
 
         .profile-picture img {
-            width: 100%;
-            height: 100%;
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
             border-radius: 50%;
         }
 
         .camera-icon {
             position: absolute;
-            bottom: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.5);
+            bottom: 6px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
             border-radius: 50%;
             padding: 5px;
             cursor: pointer;
+            font-size: 10px;
+            color: #fff;
+        }
+
+        .camera-icon:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        #file-input {
+            display: none;
         }
 
         .user-name {
@@ -113,7 +125,6 @@ $def with ()
         }
 
         .form-group .opt{
-            /* background-color: rgba(255, 255, 255, 0.3);  No compatible con la mayoria de navegadores por la personalizacion de un option -> select*/
             color: #000;
         }
 
@@ -177,10 +188,9 @@ $def with ()
     </header>
     <div class="profile-container">
         <div class="profile-picture">
-            <img src="../static/icons/user_white_light.png" alt="Perfil-User">
-            <div class="camera-icon">
-                📷
-            </div>
+            <img src="../static/icons/user_white_light.png" alt="Perfil-User" id="profile-img">
+            <div class="camera-icon" id="camera-btn">📷</div>
+            <input type="file" id="file-input" accept="image/*">
         </div>
         <div class="user-name">Usuario_1</div>
 
@@ -191,8 +201,7 @@ $def with ()
 
         <div class="form-group">
             <label for="estado">Cambiar Estado:</label>
-            <!-- <input type="text" id="estado" value="Activo" readonly> -->
-            <select id="opt_esta" name="" id="">
+            <select id="opt_esta">
                 <option class="esta" value="estado">Selecciona el estado</option>
                 <option class="esta" value="ena">Activo</option>
                 <option class="esta" value="dis">Inactivo</option>
@@ -201,7 +210,6 @@ $def with ()
 
         <div class="form-group">
             <label for="estadisticas">Estadísticas cada:</label>
-            <!-- <input type="text" id="estadisticas" value="Mes" readonly> -->
             <select class="opciones_est" id="opt_est">
                 <option value="optio">Selecciona un periodo de tiempo</option>
                 <option class="opt" value="semana">Semana</option>
@@ -211,18 +219,40 @@ $def with ()
         </div>
 
         <div class="buttons">
-            <button class="btn btn-change">Cambiar Contraseña</button>
+            <button class="btn btn-change" onclick="location.href='/cambiar_contraseña'">Cambiar Contraseña</button>
             <button class="btn btn-delete">Borrar Cuenta</button>
         </div>
 
         <script>
-            document.querySelector('.btn-change').addEventListener('click', function() {
+            // Botón de cambiar contraseña
+            /*document.querySelector('.btn-change').addEventListener('click', function() {
                 alert('Funcionalidad de cambio de contraseña no implementada.');
-            });
+            });*/
 
+            // Botón de borrar cuenta
             document.querySelector('.btn-delete').addEventListener('click', function() {
                 if (confirm('¿Estás seguro de que quieres borrar tu cuenta?')) {
                     alert('Cuenta borrada.');
+                }
+            });
+
+            // Cambio de foto de perfil
+            const fileInput = document.getElementById('file-input');
+            const profileImg = document.getElementById('profile-img');
+            const cameraBtn = document.getElementById('camera-btn');
+
+            cameraBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        profileImg.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
                 }
             });
         </script>
