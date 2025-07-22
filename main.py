@@ -737,108 +737,130 @@ class actividad9:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 
-
-import os
-import json
-import requests
-import web
-import html  # Para escapar caracteres HTML
-
 class ApiChat:
     def POST(self):
         data = web.input()
         mensaje_usuario = data.get("mensaje", "").strip()
 
-        # --- Comando especial /help ---
+        if not mensaje_usuario:
+            return json.dumps({"respuesta": "Por favor, escribe un mensaje o usa /start para comenzar."})
+
+        # ───────────────────────────── /help ─────────────────────────────
         if mensaje_usuario.lower() == "/help":
             guia = """
-🔧 Instrucciones para que tu solicitud funcione correctamente:
+📘 Bienvenido al Prompt Trainer de interfaces web
 
-Escribe tu idea de proyecto web respondiendo brevemente con las siguientes áreas:
+Este asistente te ayuda a redactar prompts efectivos para generar interfaces completas (HTML + CSS + JS).
 
-1. HTML: ¿Qué elementos deseas incluir? (ej. estructura semántica, uso de etiquetas como header, footer, main, etc.)
-2. CSS: ¿Qué tipo de estilo quieres? (ej. modo oscuro, centrado, grid, responsive...)
-3. JS: ¿Qué interacciones tendrá? (ej. validación, audio al hacer clic, sliders, conexión API...)
-4. Backend (opcional): ¿Vas a usar Flask o Django? ¿Qué rutas necesitas? ¿Requiere login, base de datos...?)
+🧠 ¿Cómo funciona?
+1. Escribe /start para ver un ejemplo.
+2. Escribe un prompt claro describiendo la interfaz.
+3. Recibirás una evaluación (1–10) y el código generado.
 
-🧠 Ejemplo de entrada correcta:
-
-HTML: Página con formulario de contacto que tenga campos para nombre, correo y mensaje. Debe estar dentro de una sección con main.
-CSS: Diseño responsivo con columnas y modo oscuro.
-JS: Validación de campos vacíos antes de enviar el formulario.
-Backend: Flask con ruta /contacto, almacenamiento en base de datos SQLite.
+✅ Ejemplo de prompt efectivo:
+"Una página con encabezado oscuro que diga 'Mi Tienda', un botón azul al centro
+que al hacer clic muestre una alerta JS."
 """
+            # Aquí SÍ escapamos porque incluye < > que no queremos interpretar
             return json.dumps({"respuesta": html.escape(guia)})
 
-        # --- Validación de mensaje vacío ---
-        if not mensaje_usuario:
-            return json.dumps({"respuesta": "Por favor, escribe un mensaje o escribe /help para obtener instrucciones."})
+        # ───────────────────────────── /start ────────────────────────────
+        if mensaje_usuario.lower() == "/start":
+            ejemplo_html = """
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='UTF-8'>
+  <style>
+    body{background:#f0f0f0;font-family:sans-serif;margin:0;padding:20px;text-align:center}
+    header{background:#333;color:#fff;padding:10px;font-size:20px}
+    main{margin-top:20px}
+    button{padding:10px 20px;background:#007bff;color:#fff;border:none;border-radius:5px}
+  </style>
+</head>
+<body>
+  <header>Mi Sitio Web</header>
+  <main>
+    <p>Bienvenido a mi página</p>
+    <button>Haz clic aquí</button>
+  </main>
+</body>
+</html>
+"""
+            instrucciones = (
+                "🎯 <strong>Reto Prompt Trainer</strong><br>"
+                "Redacta un prompt que permita generar una interfaz como esta. "
+                "Luego recibirás una calificación (1–10) y el código correspondiente.<br><br>"
+            )
 
+            iframe = (
+                f'<iframe sandbox="allow-scripts allow-same-origin" '
+                f'style="width:100%;max-width:800px;height:400px;'
+                f'border:1px solid #ccc;border-radius:10px;" '
+                f'srcdoc="{(ejemplo_html)}"></iframe>'
+            )
+
+            # NO escapamos todo el bloque porque queremos que el iframe se renderice
+            return json.dumps({"respuesta": instrucciones + iframe})
+
+        # ─────────────── Evaluación del prompt + generación de código ───────────────
         try:
             api_key = os.getenv("GROQ_API_KEY")
             modelo  = os.getenv("GROQ_MODEL", "llama3-8b-8192")
 
             headers = {
                 "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json"
+                "Content-Type": "application/json"
             }
 
-            # Prompt del sistema reforzado
             prompt_sistema = (
-                "Eres un generador de PROMPTS técnicos para proyectos web. Tu tarea es analizar las respuestas del usuario y producir un PROMPT perfectamente estructurado.\n\n"
-                "🔴 MUY IMPORTANTE: NO debes generar código (ni HTML, ni CSS, ni JavaScript). No uses etiquetas como <div>, <audio>, etc.\n"
-                "🔴 No uses encabezados como 'Título', 'Configuración Final', 'Código' ni cierres con frases como '¡Listo!'.\n"
-                "🔴 RESPONDE SIEMPRE con las siguientes SEIS SECCIONES, estrictamente en este orden:\n\n"
-                "1. Descripción general del proyecto web.\n"
-                "2. Tecnologías seleccionadas (HTML, CSS, JS, Framework backend).\n"
-                "3. Estructura semántica y etiquetas clave.\n"
-                "4. Estilo visual (CSS, diseño responsivo, modo oscuro...).\n"
-                "5. Interactividad esperada (validación, modales, API).\n"
-                "6. Backend: framework elegido, estructura de rutas, manejo de datos, base de datos, seguridad.\n\n"
-                "✅ Cada sección debe comenzar con su número y título.\n"
-                "✅ Si alguna sección no aplica, escríbela igualmente y di 'No se requiere para este proyecto'.\n"
-                "✅ No inventes más secciones. No salgas del formato.\n\n"
-                "Ejemplo de entrada:\n"
-                "HTML: Página con formulario de contacto que tenga campos para nombre, correo y mensaje. Debe estar dentro de una sección con main.\n"
-                "CSS: Diseño responsivo con columnas y modo oscuro.\n"
-                "JS: Validación de campos vacíos antes de enviar el formulario.\n"
-                "Backend: Flask con ruta /contacto, almacenamiento en base de datos SQLite.\n\n"
-                "Comienza cuando recibas la entrada del usuario."
+                "Eres un experto en prompt engineering aplicado al desarrollo web. "
+                "Primero evalúa el prompt del usuario con base en claridad, precisión y estructura. "
+                "Otorga una calificación del 1 al 10 y explica brevemente por qué.\n\n"
+                "Después genera un documento HTML5 completo que cumpla la solicitud.\n\n"
+                "✅ Formato EXACTO:\n"
+                "1. 📝 Evaluación del prompt:\n"
+                "Puntaje: X/10\n"
+                "Comentario: ...\n\n"
+                "2. 🧾 Código generado:\n"
+                "(bloque completo desde <!DOCTYPE html> hasta </html>)"
+                "3. recomendaciones:\n"
             )
 
             payload = {
                 "model": modelo,
                 "messages": [
                     {"role": "system", "content": prompt_sistema},
-                    {"role": "user", "content": mensaje_usuario}
+                    {"role": "user",   "content": mensaje_usuario}
                 ],
                 "max_tokens": 4096,
-                "temperature": 0.3,
-                "top_p": 1.0,
-                "stop": None
+                "temperature": 0.4,
+                "top_p": 1.0
             }
 
-            r = requests.post(
+            resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers=headers, json=payload, timeout=30
             )
-            r.raise_for_status()
-            data = r.json()
+            resp.raise_for_status()
+            data = resp.json()
             respuesta = data["choices"][0]["message"]["content"].strip()
 
-            # Verificar si fue truncada
-            finish_reason = data["choices"][0].get("finish_reason", "")
-            if finish_reason == "length":
-                respuesta += "\n\n⚠️ La respuesta fue truncada. Intenta dividir tu entrada o aumentar max_tokens."
+            if data["choices"][0].get("finish_reason") == "length":
+                respuesta += (
+                    "\n\n⚠️ La respuesta fue truncada. Intenta dividir tu prompt "
+                    "o aumentar max_tokens."
+                )
 
-            # Escape para evitar ejecución como HTML en navegador
+            # Escapamos porque puede contener <html> y luego el frontend lo pintará en iframe
             return json.dumps({"respuesta": html.escape(respuesta)})
 
         except Exception as e:
             return json.dumps({"respuesta": f"Error al procesar la solicitud: {e}"})
 
 
-
+# ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
+    # Asegúrate de que `urls` esté definido arriba como tu tabla de rutas
     app = web.application(urls, globals())
     app.run()

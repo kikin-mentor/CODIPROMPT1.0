@@ -10,7 +10,7 @@ $def with ()
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom,#120c2b,#0d4177);
+      background: linear-gradient(to bottom, #120c2b, #0d4177);
       color: #fff;
       height: 100vh;
       display: flex;
@@ -20,7 +20,6 @@ $def with ()
     .chat-container {
       width: 100%;
       height: 100vh;
-      background-color: rgba(255, 255, 255, 0.1);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -49,7 +48,9 @@ $def with ()
       padding: 12px 18px;
       border-radius: 18px;
       line-height: 1.4;
-      max-width: 80%;
+      max-width: 90%;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
     }
 
     .user-message {
@@ -101,17 +102,22 @@ $def with ()
     .send-btn:hover {
       background-color: rgba(255, 255, 255, 0.35);
     }
+
+    iframe {
+      background: white;
+    }
   </style>
 </head>
 <body>
   <div class="chat-container">
     <div class="chat-header">Asistente CodiPROMPT</div>
+
     <div class="chat-messages" id="chat-messages">
       <div class="message bot-message">
-        Hola, ¿en qué puedo ayudarte hoy?
+        Hola, ¿en qué puedo ayudarte hoy? Puedes escribir <code>/start</code> para comenzar el entrenamiento de prompts.
       </div>
     </div>
-    
+
     <div class="input-area">
       <textarea class="chat-input" id="user-input" placeholder="Escribe tu mensaje..." autofocus></textarea>
       <button class="send-btn" id="send-btn">Enviar</button>
@@ -149,7 +155,7 @@ $def with ()
         addMessage(data.respuesta, 'bot');
       })
       .catch(() => {
-        addMessage("Error al conectar con el servidor.", 'bot');
+        addMessage("❌ Error al conectar con el servidor.", 'bot');
       });
     }
 
