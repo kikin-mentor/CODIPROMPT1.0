@@ -12,11 +12,11 @@ import plotly.graph_objs as go
 import plotly.io as pio
 import os
 
-    sql = f.read()
-    conn = sqlite3.connect(DB_PATH)
-    conn.executescript(sql)
-    conn.commit()
-    conn.close()
+sql = f.read()
+conn = sqlite3.connect(DB_PATH)
+conn.executescript(sql)
+conn.commit()
+conn.close()
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
