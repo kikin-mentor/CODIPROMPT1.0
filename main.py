@@ -6,6 +6,13 @@ import requests
 import json
 from dotenv import load_dotenv  
 import html
+import time
+from flask import Flask, render_template, request, redirect, session, url_for, jsonify
+import plotly.graph_objs as go
+import plotly.io as pio
+import os
+
+
 urls = (
     '/', 'Index',
     '/registro', 'Registro',
@@ -49,6 +56,55 @@ class Index:
 class Registro:
     def GET(self):
         return render.registro()
+    def POST(self):
+        form = web.input()
+        campos = [
+            form.get('nombre', '').strip(),
+            form.get('apellidos', '').strip(),
+            form.get('usuario', '').strip(),
+            form.get('plantel', '').strip(),
+            form.get('matricula', '').strip(),
+            form.get('correo', '').strip(),
+            form.get('password', '').strip(),
+            form.get('confirmar', '').strip()
+        ]
+        if any(not campo for campo in campos):
+            return render.registro(error="llena los campos para continuar")
+
+        correo = form.get('correo', '').strip()
+        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
+        if not re.match(correo_regex, correo):
+            return render.registro(error="Ingresa un correo válido")
+
+        password = form.get('password', '').strip()
+        confirmar = form.get('confirmar', '').strip()
+        if password != confirmar:
+            return render.registro(error="Las contraseñas no coinciden")
+
+        nombre = form.get('nombre', '').strip()
+        apellidos = form.get('apellidos', '').strip()
+        usuario = form.get('usuario', '').strip()
+        plantel = form.get('plantel', '').strip()
+        matricula = form.get('matricula', '').strip()
+
+        try:
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            con.commit()
+            con.close()
+            return render.inicio_sesion()
+        except sqlite3.IntegrityError as e:
+            if 'usuario' in str(e):
+                return render.registro(error="El nombre de usuario ya existe")
+            if 'correo' in str(e):
+                return render.registro(error="El correo ya está registrado")
+            if 'matricula' in str(e):
+                return render.registro(error="La matrícula ya está registrada")
+            return render.registro(error=f"Error al registrar: {e}")
+        except Exception as e:
+            return render.registro(error=f"Error al registrar: {e}")
 
     def POST(self):
         form = web.input()
@@ -141,6 +197,33 @@ class LeccionRapida:
 class PerfilUser:
     def GET(self):
         return render.perfil_user()
+
+    def POST(self):
+        form = web.input()
+        usuario = form.get('usuario', '').strip()
+        password = form.get('password', '').strip()
+        if not usuario or not password:
+            return render.perfil_user(error="Debes ingresar usuario y contraseña para borrar la cuenta")
+        try:
+            con = get_db()
+            cur = con.cursor()
+            # Verifica que el usuario y contraseña sean correctos
+            cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
+            row = cur.fetchone()
+            if not row:
+                con.close()
+                return render.perfil_user(error="Usuario o contraseña incorrectos")
+            id_usuario = row['id_usuario']
+            # Borra datos relacionados (tiempo_de_uso, sesiones, etc.)
+            cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
+            cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
+            # Borra el usuario
+            cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
+            con.commit()
+            con.close()
+            return render.index(mensaje="Cuenta eliminada correctamente")
+        except Exception as e:
+            return render.perfil_user(error=f"Error al borrar la cuenta: {e}")
 
 class Leccion1:
     def GET(self):
@@ -861,6 +944,6 @@ que al hacer clic muestre una alerta JS."
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
-    # Asegúrate de que `urls` esté definido arriba como tu tabla de rutas
+
     app = web.application(urls, globals())
     app.run()
