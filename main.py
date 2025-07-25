@@ -12,16 +12,6 @@ import plotly.graph_objs as go
 import plotly.io as pio
 import os
 
-sql = f.read()
-conn = sqlite3.connect(DB_PATH)
-conn.executescript(sql)
-conn.commit()
-conn.close()
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 urls = (
     '/', 'Index',
@@ -61,41 +51,6 @@ load_dotenv()  # Cargar variables de entorno desde .env
 
 class Index:
     def GET(self):
-        # Iniciar sesión de web.py
-        session = web.ctx.session if hasattr(web.ctx, 'session') else None
-        if not session:
-            if not hasattr(web, 'config'):
-                web.config.session_parameters = web.storage(
-                    cookie_name="codiprompt_session",
-                    timeout=86400,
-                    ignore_expiry=False,
-                    ignore_change_ip=True,
-                    secret_key="codiprompt_secret",
-                    expired_message="Session expired"
-                )
-            if not hasattr(web, 'session'):
-                web.session = __import__('web').session.Session(
-                    web.application(urls, globals()),
-                    web.session.DiskStore('sessions'),
-                    initializer={'start_time': None, 'session_id': None}
-                )
-            session = web.session
-        # Si no hay tiempo de inicio, lo registramos
-        if not session.get('start_time'):
-            session['start_time'] = int(time.time())
-            # Insertar en la base de datos una nueva sesión y tiempo de uso
-            con = get_db()
-            cur = con.cursor()
-            # Por ahora, usuario anónimo (id_usuario NULL)
-            fecha = time.strftime('%Y-%m-%d')
-            hora_inicio = time.strftime('%H:%M:%S')
-            cur.execute("INSERT INTO sesiones (id_usuario, fecha, hora_inicio) VALUES (?, ?, ?)", (None, fecha, hora_inicio))
-            session_id = cur.lastrowid
-            session['session_id'] = session_id
-            # Registrar tiempo_de_uso con minutos=0 (se actualizará al salir)
-            cur.execute("INSERT INTO tiempo_de_uso (id_usuario, fecha, minutos) VALUES (?, ?, ?)", (None, fecha, 0))
-            con.commit()
-            con.close()
         return render.index()
 
 class Registro:
