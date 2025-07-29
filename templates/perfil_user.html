@@ -1,4 +1,4 @@
-$def with ()
+$def with (nombre=None, estado=None)
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,7 +192,10 @@ $def with ()
             <div class="camera-icon" id="camera-btn">📷</div>
             <input type="file" id="file-input" accept="image/*">
         </div>
-        <div class="user-name">Usuario_1</div>
+        $if nombre:
+            <div class="user-name">$nombre</div>
+        $else:
+            <div class="user-name">Usuario no disponible</div>
 
         <div class="form-group">
             <label for="nombre">Cambiar Nombre:</label>
@@ -200,13 +203,16 @@ $def with ()
         </div>
 
         <div class="form-group">
-            <label for="estado">Cambiar Estado:</label>
-            <select id="opt_esta">
-                <option class="esta" value="estado">Selecciona el estado</option>
-                <option class="esta" value="ena">Activo</option>
-                <option class="esta" value="dis">Inactivo</option>
-            </select>
+            <label for="estado">Estado actual:</label>
+            $if estado:
+                <p>$estado</p>
+            $else:
+                <p>No disponible</p>
         </div>
+        $if mensaje:
+            <div style="color:green;font-weight:bold;">$mensaje</div>
+        $else:
+            <div></div>
 
         <div class="form-group">
             <label for="estadisticas">Estadísticas cada:</label>

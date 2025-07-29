@@ -1,0 +1,17 @@
+$def with (bar_html, pie_html, scatter_html)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil Estadísticas</title>
+</head>
+<body>
+    <h1>Estadísticas de uso</h1>
+    <h2>Tiempo de uso por día</h2>
+    $:bar_html
+    <h2>Lecciones vs Prompts correctos</h2>
+    $:pie_html
+    <h2>Comparativa: Tiempo vs Lecciones/Prompts</h2>
+    $:scatter_html
+</body>
+</html>

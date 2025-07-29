@@ -42,7 +42,71 @@ urls = (
     '/actividad8', 'actividad8',
     '/actividad9', 'actividad9',
     '/api_chat', 'ApiChat',
+    '/perfil_estadisticas', 'PerfilEstadisticas',
 )
+def get_db():
+    # Retorna conexión con row_factory para dict
+    con = sqlite3.connect("tiempo.db")
+    con.row_factory = sqlite3.Row
+    return con
+
+class PerfilEstadisticas:
+    """
+    Ruta para mostrar las estadísticas del usuario (tiempo de uso, gráficas, etc).
+    """
+    def GET(self):
+        id_usuario = None
+        if hasattr(user_session, 'id_usuario') and user_session.id_usuario:
+            id_usuario = user_session.id_usuario
+        dias = []
+        minutos = []
+        lecciones_realizadas = 0
+        prompts_correctos = 0
+        if id_usuario:
+            conn = get_db()
+            cur = conn.cursor()
+            # Calcular minutos de sesión actual y actualizar tiempo_de_uso
+            try:
+                inicio = getattr(user_session, 'inicio', None)
+                if inicio:
+                    minutos_sesion = int((time.time() - inicio) // 60)
+                    fecha = time.strftime('%Y-%m-%d')
+                    cur.execute('UPDATE tiempo_de_uso SET minutos = minutos + ? WHERE id_usuario=? AND fecha=?', (minutos_sesion, id_usuario, fecha))
+                    conn.commit()
+                    user_session.inicio = int(time.time())
+            except Exception:
+                pass
+            # Tiempo de uso por día
+            cur.execute('SELECT fecha, SUM(minutos) as total_minutos FROM tiempo_de_uso WHERE id_usuario=? GROUP BY fecha', (id_usuario,))
+            tiempo_data = cur.fetchall()
+            import datetime
+            dias_semana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            fechas = [row['fecha'] for row in tiempo_data]
+            dias = [dias_semana[datetime.datetime.strptime(f, '%Y-%m-%d').weekday()] for f in fechas]
+            minutos = [row['total_minutos'] for row in tiempo_data]
+            # Lecciones realizadas
+            cur.execute('SELECT COUNT(*) FROM lecciones_completadas WHERE id_usuario=?', (id_usuario,))
+            lecciones_realizadas = cur.fetchone()[0] or 0
+            # Prompts correctos (tabla prompt, campo correcto)
+            cur.execute('SELECT COUNT(*) FROM prompt WHERE id_usuario=? AND correcto=1', (id_usuario,))
+            prompts_correctos = cur.fetchone()[0] or 0
+            conn.close()
+        # Gráfica de barras
+        bar = go.Figure([go.Bar(x=dias, y=minutos, name='Minutos de uso')])
+        bar.update_layout(title='Tiempo de uso por día', xaxis_title='Día de la semana', yaxis_title='Minutos')
+        # Gráfica de pastel
+        pie = go.Figure(data=[go.Pie(labels=['Lecciones', 'Prompts correctos'], values=[lecciones_realizadas, prompts_correctos])])
+        pie.update_layout(title='Lecciones vs Prompts correctos')
+        # Gráfica de dispersión
+        scatter = go.Figure()
+        scatter.add_trace(go.Scatter(x=[lecciones_realizadas], y=[minutos[-1] if minutos else 0], mode='markers', name='Lecciones'))
+        scatter.add_trace(go.Scatter(x=[prompts_correctos], y=[minutos[-1] if minutos else 0], mode='markers', name='Prompts'))
+        scatter.update_layout(title='Comparativa: Tiempo vs Lecciones/Prompts', xaxis_title='Lecciones/Prompts', yaxis_title='Minutos')
+        # Renderizar la plantilla
+        bar_html = pio.to_html(bar, full_html=False)
+        pie_html = pio.to_html(pie, full_html=False)
+        scatter_html = pio.to_html(scatter, full_html=False)
+        return render.perfil_estadisticas(bar_html, pie_html, scatter_html)
 render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
 modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # usa este modelo por defecto si no se encuentra la variable
@@ -56,55 +120,6 @@ class Index:
 class Registro:
     def GET(self):
         return render.registro()
-    def POST(self):
-        form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
-            form.get('apellidos', '').strip(),
-            form.get('usuario', '').strip(),
-            form.get('plantel', '').strip(),
-            form.get('matricula', '').strip(),
-            form.get('correo', '').strip(),
-            form.get('password', '').strip(),
-            form.get('confirmar', '').strip()
-        ]
-        if any(not campo for campo in campos):
-            return render.registro(error="llena los campos para continuar")
-
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
-            return render.registro(error="Ingresa un correo válido")
-
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
-        if password != confirmar:
-            return render.registro(error="Las contraseñas no coinciden")
-
-        nombre = form.get('nombre', '').strip()
-        apellidos = form.get('apellidos', '').strip()
-        usuario = form.get('usuario', '').strip()
-        plantel = form.get('plantel', '').strip()
-        matricula = form.get('matricula', '').strip()
-
-        try:
-            con = sqlite3.connect("usuarios.db")
-            cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
-            con.commit()
-            con.close()
-            return render.inicio_sesion()
-        except sqlite3.IntegrityError as e:
-            if 'usuario' in str(e):
-                return render.registro(error="El nombre de usuario ya existe")
-            if 'correo' in str(e):
-                return render.registro(error="El correo ya está registrado")
-            if 'matricula' in str(e):
-                return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error al registrar: {e}")
-        except Exception as e:
-            return render.registro(error=f"Error al registrar: {e}")
 
     def POST(self):
         form = web.input()
@@ -121,11 +136,14 @@ class Registro:
         if any(not campo for campo in campos):
             return render.registro(error="llena los campos para continuar")
 
+        # Validar correo electrónico
+        import re
         correo = form.get('correo', '').strip()
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
             return render.registro(error="Ingresa un correo válido")
 
+        # Validar que las contraseñas coincidan
         password = form.get('password', '').strip()
         confirmar = form.get('confirmar', '').strip()
         if password != confirmar:
@@ -136,7 +154,8 @@ class Registro:
         usuario = form.get('usuario', '').strip()
         plantel = form.get('plantel', '').strip()
         matricula = form.get('matricula', '').strip()
-
+        correo = form.get('correo', '').strip()
+        password = form.get('password', '').strip()
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
@@ -144,7 +163,7 @@ class Registro:
                         (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
-            return render.inicio_sesion()
+            return web.seeother("/inicio_sesion")  # Redirige a la página de inicio de sesión
         except sqlite3.IntegrityError as e:
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
@@ -162,29 +181,29 @@ class InicioSesion:
 
     def POST(self):
         form = web.input()
-        usuario = form.usuario.strip()
-        password = form.password.strip()
+        correo = form.get('correo', '').strip()
+        password = form.get('password', '').strip()
 
-        if not usuario or not password:
+        if not correo or not password:
             return render.inicio_sesion(error="llena los campos para continuar")
 
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if '@' in usuario and not re.match(correo_regex, usuario):
+        if not re.match(correo_regex, correo):
             return render.inicio_sesion(error="Ingresa un correo válido")
 
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
-            cur.execute("SELECT password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
+            cur.execute("SELECT password FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
 
             if row and row[0] == password:
                 return render.info_secion()
             else:
-                return render.inicio_sesion(error="usuario o contraseña incorrecta")
+                return render.inicio_sesion(error="correo o contraseña incorrecta")
         except Exception as e:
-            return render.inicio_sesion(error="usuario o contraseña incorrecta")
+            return render.inicio_sesion(error="correo o contraseña incorrecta")
 
 class InfoSecion:
     def GET(self):
@@ -196,73 +215,161 @@ class LeccionRapida:
 
 class PerfilUser:
     def GET(self):
-        return render.perfil_user()
+        correo = None
+        try:
+            correo = user_session.usuario
+        except Exception:
+            pass
+        nombre = None
+        estado = None
+        mensaje = None
+        if correo:
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
+            row = cur.fetchone()
+            con.close()
+            if row:
+                nombre = row[0]
+                estado = row[1] if len(row) > 1 else ""
+        return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
 
     def POST(self):
-        form = web.input()
-        usuario = form.get('usuario', '').strip()
-        password = form.get('password', '').strip()
-        if not usuario or not password:
-            return render.perfil_user(error="Debes ingresar usuario y contraseña para borrar la cuenta")
+        correo = None
         try:
-            con = get_db()
-            cur = con.cursor()
-            # Verifica que el usuario y contraseña sean correctos
-            cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
-            row = cur.fetchone()
-            if not row:
+            correo = user_session.usuario
+        except Exception:
+            pass
+        form = web.input()
+        nuevo_nombre = form.get('nuevo_nombre', '').strip()
+        nuevo_estado = form.get('nuevo_estado', '').strip()
+        borrar_usuario = form.get('borrar_usuario', '').strip()
+        password = form.get('password', '').strip()
+        mensaje = None
+        # Si se solicita borrar la cuenta
+        if borrar_usuario and password and correo:
+            try:
+                con = sqlite3.connect("usuarios.db")
+                cur = con.cursor()
+                cur.execute("SELECT id_usuario FROM usuarios WHERE correo=? AND password=?", (correo, password))
+                row = cur.fetchone()
+                if not row:
+                    con.close()
+                    return render.perfil_user(error="Correo o contraseña incorrectos")
+                id_usuario = row[0]
+                cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
+                cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
+                cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
+                con.commit()
                 con.close()
-                return render.perfil_user(error="Usuario o contraseña incorrectos")
-            id_usuario = row['id_usuario']
-            # Borra datos relacionados (tiempo_de_uso, sesiones, etc.)
-            cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
-            cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
-            # Borra el usuario
-            cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
+                return render.index(mensaje="Cuenta eliminada correctamente")
+            except Exception as e:
+                return render.perfil_user(error=f"Error al borrar la cuenta: {e}")
+        # Si se solicita actualizar nombre o estado
+        if correo and (nuevo_nombre or nuevo_estado):
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            if nuevo_nombre:
+                cur.execute("UPDATE usuarios SET nombre=? WHERE correo=?", (nuevo_nombre, correo))
+            if nuevo_estado:
+                cur.execute("UPDATE usuarios SET estado=? WHERE correo=?", (nuevo_estado, correo))
             con.commit()
+            cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
+            row = cur.fetchone()
             con.close()
-            return render.index(mensaje="Cuenta eliminada correctamente")
-        except Exception as e:
-            return render.perfil_user(error=f"Error al borrar la cuenta: {e}")
+            mensaje = "Datos actualizados correctamente."
+            nombre = row[0] if row else None
+            estado = row[1] if row and len(row) > 1 else ""
+            return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
+        # Si no hay cambios, solo muestra la info
+        nombre = None
+        estado = None
+        if correo:
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
+            row = cur.fetchone()
+            con.close()
+            if row:
+                nombre = row[0]
+                estado = row[1] if len(row) > 1 else ""
+        return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
+
+def obtener_info_leccion(id_leccion):
+    usuario = None
+    id_usuario = None
+    try:
+        usuario = user_session.usuario
+        id_usuario = user_session.id_usuario
+    except Exception:
+        pass
+    con = sqlite3.connect("lecciones.db")
+    cur = con.cursor()
+    cur.execute("SELECT contenido FROM lecciones WHERE id_leccion=?", (id_leccion,))
+    row = cur.fetchone()
+    contenido = row[0] if row else ""
+    con.close()
+    tiempo_total = 0
+    completada = False
+    if id_usuario:
+        con2 = sqlite3.connect("tiempo.db")
+        cur2 = con2.cursor()
+        cur2.execute("SELECT SUM(tiempo) FROM tiempo_leccion WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
+        row = cur2.fetchone()
+        tiempo_total = row[0] if row and row[0] else 0
+        cur2.execute("SELECT 1 FROM lecciones_completadas WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
+        completada = bool(cur2.fetchone())
+        con2.close()
+    return contenido, tiempo_total, completada
 
 class Leccion1:
     def GET(self):
-        return render.leccion1()
+        contenido, tiempo_total, completada = obtener_info_leccion(1)
+        return render.leccion1(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion2:
     def GET(self):
-        return render.leccion2()
+        contenido, tiempo_total, completada = obtener_info_leccion(2)
+        return render.leccion2(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion3:
     def GET(self):
-        return render.leccion3()
+        contenido, tiempo_total, completada = obtener_info_leccion(3)
+        return render.leccion3(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion4:
     def GET(self):
-        return render.leccion4()
+        contenido, tiempo_total, completada = obtener_info_leccion(4)
+        return render.leccion4(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion5:
     def GET(self):
-        return render.leccion5()
+        contenido, tiempo_total, completada = obtener_info_leccion(5)
+        return render.leccion5(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion6:
     def GET(self):
-        return render.leccion6()
+        contenido, tiempo_total, completada = obtener_info_leccion(6)
+        return render.leccion6(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion7:
     def GET(self):
-        return render.leccion7()
+        contenido, tiempo_total, completada = obtener_info_leccion(7)
+        return render.leccion7(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion8:
     def GET(self):
-        return render.leccion8()
+        contenido, tiempo_total, completada = obtener_info_leccion(8)
+        return render.leccion8(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class Leccion9:
     def GET(self):
-        return render.leccion9()
+        contenido, tiempo_total, completada = obtener_info_leccion(9)
+        return render.leccion9(contenido=contenido, tiempo_total=tiempo_total, completada=completada)
 
 class LeccionPersonalizada:
     def GET(self):
+        # Página estática, sin lógica dinámica ni consulta a la base de datos
         return render.leccion_personalizada()
 
 class Static:
@@ -324,12 +431,12 @@ class actividad1:
         api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
-    "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
-    "El documento comienza con <!DOCTYPE html>. Se utiliza <html lang=\"es\">. "
-    "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
-    "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
-)
+            "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
+            "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
+            "El documento comienza con <!DOCTYPE html>. Se utiliza <html lang=\"es\">. "
+            "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
+            "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
+        )
         if not api_key1:
             return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
@@ -361,6 +468,23 @@ class actividad1:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 1, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -418,6 +542,23 @@ class actividad2:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 2, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -475,6 +616,23 @@ class actividad3:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 3, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -532,6 +690,23 @@ class actividad4:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 4, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -587,6 +762,23 @@ class actividad5:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 5, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -645,6 +837,23 @@ class actividad6:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 6, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -702,6 +911,23 @@ class actividad7:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 7, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -758,6 +984,23 @@ class actividad8:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 8, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -814,6 +1057,23 @@ class actividad9:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
+            # Guardar resultado y código en la base de datos actividades.db
+            try:
+                usuario = None
+                id_usuario = None
+                try:
+                    usuario = user_session.usuario
+                    id_usuario = user_session.id_usuario
+                except Exception:
+                    pass
+                con = sqlite3.connect("lecciones.db")
+                cur = con.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, actividad INTEGER, codigo TEXT, resultado TEXT, fecha TEXT)")
+                cur.execute("INSERT INTO actividades (id_usuario, actividad, codigo, resultado, fecha) VALUES (?, ?, ?, ?, date('now'))", (id_usuario, 9, codigo, feedback))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
@@ -944,6 +1204,9 @@ que al hacer clic muestre una alerta JS."
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
-
     app = web.application(urls, globals())
+    store = web.session.DiskStore('sessions')
+    user_session = web.session.Session(app, store, initializer={'usuario': None, 'id_usuario': None, 'inicio': None})
+    # Usar el middleware Session para que web.ctx.session esté disponible en cada petición
+    app.add_processor(user_session._processor)
     app.run()
