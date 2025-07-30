@@ -122,76 +122,57 @@ class Registro:
         return render.registro()
 
     def POST(self):
-        import re
         form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
-            form.get('apellidos', '').strip(),
-            form.get('usuario', '').strip(),
-            form.get('plantel', '').strip(),
-            form.get('matricula', '').strip(),
-            form.get('correo', '').strip(),
-            form.get('password', '').strip(),
-            form.get('confirmar', '').strip()
-        ]
-
-        if any(not campo for campo in campos):
-            return render.registro(error="Llena los campos para continuar")
-
-        # Validar correo electrónico
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
-            return render.registro(error="Ingresa un correo válido")
-
-        # Validar que las contraseñas coincidan
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
-        if password != confirmar:
-            return render.registro(error="Las contraseñas no coinciden")
-
+        
+        # Obtener todos los campos del formulario
         nombre = form.get('nombre', '').strip()
         apellidos = form.get('apellidos', '').strip()
         usuario = form.get('usuario', '').strip()
         plantel = form.get('plantel', '').strip()
         matricula = form.get('matricula', '').strip()
+        correo = form.get('correo', '').strip()
+        password = form.get('password', '').strip()
+        confirmar = form.get('confirmar', '').strip()
+        
+        campos = [nombre, apellidos, usuario, plantel, matricula, correo, password, confirmar]
+        
+        # Verificar si todos los campos están vacíos
+        if all(not campo for campo in campos):
+            return render.registro(error="Todos los campos son obligatorios. Por favor, completa el formulario.")
+        
+        # Verificar si algún campo específico está vacío
+        if any(not campo for campo in campos):
+            return render.registro(error="Todos los campos son obligatorios. Por favor, completa todos los campos.")
 
-        # Debug: verificar la ruta real a la base de datos
-        print("[DEBUG] Ruta actual:", os.getcwd())
-        print("[DEBUG] Ruta DB absoluta:", os.path.abspath("usuarios.db"))
+        # Validar correo electrónico
+        import re
+        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
+        if not re.match(correo_regex, correo):
+            return render.registro(error="Ingresa un correo válido")
+
+        # Validar que las contraseñas coincidan
+        if password != confirmar:
+            return render.registro(error="Las contraseñas no coinciden")
 
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
-            print("[DEBUG] Conexión a DB abierta")
-
-            cur.execute("""
-                INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (nombre, apellidos, usuario, plantel, matricula, correo, password)
-            )
+            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
-            print("[DEBUG] Registro insertado correctamente")
             con.close()
-            print("[DEBUG] Conexión cerrada")
-
-            print("[DEBUG] Redirigiendo a /inicio_sesion")
-            return web.seeother("/inicio_sesion")
-
+            return web.seeother("/")  # Redirige a la página de inicio de sesión
         except sqlite3.IntegrityError as e:
-            print(f"[DEBUG] Error de integridad en registro: {e}")
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
             if 'correo' in str(e):
                 return render.registro(error="El correo ya está registrado")
             if 'matricula' in str(e):
                 return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error de integridad: {e}")
-
-        except Exception as e:
-            print(f"[DEBUG] Error general en registro: {e}")
             return render.registro(error=f"Error al registrar: {e}")
-
+        except Exception as e:
+            return render.registro(error=f"Error al registrar: {e}")
+            
 class InicioSesion:
     def GET(self):
         return render.inicio_sesion(error=None)
