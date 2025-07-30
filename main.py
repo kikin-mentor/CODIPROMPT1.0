@@ -122,6 +122,7 @@ class Registro:
         return render.registro()
 
     def POST(self):
+        import re
         form = web.input()
         campos = [
             form.get('nombre', '').strip(),
@@ -133,11 +134,11 @@ class Registro:
             form.get('password', '').strip(),
             form.get('confirmar', '').strip()
         ]
+
         if any(not campo for campo in campos):
-            return render.registro(error="llena los campos para continuar")
+            return render.registro(error="Llena los campos para continuar")
 
         # Validar correo electrónico
-        import re
         correo = form.get('correo', '').strip()
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
@@ -154,30 +155,46 @@ class Registro:
         usuario = form.get('usuario', '').strip()
         plantel = form.get('plantel', '').strip()
         matricula = form.get('matricula', '').strip()
-        correo = form.get('correo', '').strip()
-        password = form.get('password', '').strip()
+
+        # Debug: verificar la ruta real a la base de datos
+        print("[DEBUG] Ruta actual:", os.getcwd())
+        print("[DEBUG] Ruta DB absoluta:", os.path.abspath("usuarios.db"))
+
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            print("[DEBUG] Conexión a DB abierta")
+
+            cur.execute("""
+                INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (nombre, apellidos, usuario, plantel, matricula, correo, password)
+            )
             con.commit()
+            print("[DEBUG] Registro insertado correctamente")
             con.close()
-            return web.seeother("/inicio_sesion")  # Redirige a la página de inicio de sesión
+            print("[DEBUG] Conexión cerrada")
+
+            print("[DEBUG] Redirigiendo a /inicio_sesion")
+            return web.seeother("/inicio_sesion")
+
         except sqlite3.IntegrityError as e:
+            print(f"[DEBUG] Error de integridad en registro: {e}")
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
             if 'correo' in str(e):
                 return render.registro(error="El correo ya está registrado")
             if 'matricula' in str(e):
                 return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error al registrar: {e}")
+            return render.registro(error=f"Error de integridad: {e}")
+
         except Exception as e:
+            print(f"[DEBUG] Error general en registro: {e}")
             return render.registro(error=f"Error al registrar: {e}")
 
 class InicioSesion:
     def GET(self):
-        return render.inicio_sesion()
+        return render.inicio_sesion(error=None)
 
     def POST(self):
         form = web.input()
@@ -185,7 +202,7 @@ class InicioSesion:
         password = form.get('password', '').strip()
 
         if not correo or not password:
-            return render.inicio_sesion(error="llena los campos para continuar")
+            return render.inicio_sesion(error="Llena los campos para continuar")
 
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
@@ -201,9 +218,9 @@ class InicioSesion:
             if row and row[0] == password:
                 return render.info_secion()
             else:
-                return render.inicio_sesion(error="correo o contraseña incorrecta")
+                return render.inicio_sesion(error="Correo o contraseña incorrecta")
         except Exception as e:
-            return render.inicio_sesion(error="correo o contraseña incorrecta")
+            return render.inicio_sesion(error="Correo o contraseña incorrecta")
 
 class InfoSecion:
     def GET(self):
