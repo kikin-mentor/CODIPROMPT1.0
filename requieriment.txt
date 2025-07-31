@@ -124,12 +124,3 @@ web.py==0.62
 webcolors==24.11.1
 webencodings==0.5.1
 websocket-client==1.8.0
-<<<<<<< HEAD
-flask=3.1.1
-dotenv=1.1.1
-plotly= 6.2.0
-=======
-plotly==6.2.0
-flask==3.1.1
-dotenv==1.1.1
->>>>>>> f6559ec3a72cf3251643331798b763c6f06dc9db

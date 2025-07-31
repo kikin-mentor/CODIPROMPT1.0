@@ -1,16 +1,87 @@
+# Inicialización de tablas necesarias en cada base de datos
+def inicializar_tablas():
+    # Usuarios
+    con_u = get_db_usuarios()
+    cur_u = con_u.cursor()
+    cur_u.execute('''CREATE TABLE IF NOT EXISTS usuarios (
+        id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        apellidos TEXT,
+        usuario TEXT UNIQUE,
+        plantel TEXT,
+        matricula TEXT UNIQUE,
+        correo TEXT UNIQUE,
+        password TEXT,
+        estado TEXT DEFAULT ''
+    )''')
+    con_u.commit()
+    con_u.close()
+
+    # Lecciones
+    con_l = get_db_lecciones()
+    cur_l = con_l.cursor()
+    cur_l.execute('''CREATE TABLE IF NOT EXISTS lecciones (
+        id_leccion INTEGER PRIMARY KEY AUTOINCREMENT,
+        contenido TEXT
+    )''')
+    cur_l.execute('''CREATE TABLE IF NOT EXISTS lecciones_completadas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario INTEGER,
+        id_leccion INTEGER,
+        fecha TEXT
+    )''')
+    cur_l.execute('''CREATE TABLE IF NOT EXISTS actividades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario INTEGER,
+        actividad INTEGER,
+        codigo TEXT,
+        resultado TEXT,
+        fecha TEXT
+    )''')
+    con_l.commit()
+    con_l.close()
+
+    # Tiempo
+    con_t = get_db_tiempo()
+    cur_t = con_t.cursor()
+    cur_t.execute('''CREATE TABLE IF NOT EXISTS tiempo_de_uso (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario INTEGER,
+        fecha TEXT,
+        minutos INTEGER DEFAULT 0
+    )''')
+    cur_t.execute('''CREATE TABLE IF NOT EXISTS tiempo_leccion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario INTEGER,
+        id_leccion INTEGER,
+        tiempo INTEGER DEFAULT 0
+    )''')
+    con_t.commit()
+    con_t.close()
+
+    # Prompt (para estadísticas)
+    con_l = get_db_lecciones()
+    cur_l = con_l.cursor()
+    cur_l.execute('''CREATE TABLE IF NOT EXISTS prompt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario INTEGER,
+        texto TEXT,
+        correcto INTEGER DEFAULT 0
+    )''')
+    con_l.commit()
+    con_l.close()
 import web
 import sqlite3
 import re
 import os
 import requests
 import json
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
 import html
 import time
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 import plotly.graph_objs as go
 import plotly.io as pio
-import os
+
 
 
 urls = (
@@ -44,8 +115,19 @@ urls = (
     '/api_chat', 'ApiChat',
     '/perfil_estadisticas', 'PerfilEstadisticas',
 )
-def get_db():
-    # Retorna conexión con row_factory para dict
+
+# Funciones centralizadas para obtener conexiones a cada base de datos
+def get_db_usuarios():
+    con = sqlite3.connect("usuarios.db")
+    con.row_factory = sqlite3.Row
+    return con
+
+def get_db_lecciones():
+    con = sqlite3.connect("lecciones.db")
+    con.row_factory = sqlite3.Row
+    return con
+
+def get_db_tiempo():
     con = sqlite3.connect("tiempo.db")
     con.row_factory = sqlite3.Row
     return con
@@ -123,8 +205,6 @@ class Registro:
 
     def POST(self):
         form = web.input()
-        
-        # Obtener todos los campos del formulario
         nombre = form.get('nombre', '').strip()
         apellidos = form.get('apellidos', '').strip()
         usuario = form.get('usuario', '').strip()
@@ -133,35 +213,24 @@ class Registro:
         correo = form.get('correo', '').strip()
         password = form.get('password', '').strip()
         confirmar = form.get('confirmar', '').strip()
-        
         campos = [nombre, apellidos, usuario, plantel, matricula, correo, password, confirmar]
-        
-        # Verificar si todos los campos están vacíos
         if all(not campo for campo in campos):
             return render.registro(error="Todos los campos son obligatorios. Por favor, completa el formulario.")
-        
-        # Verificar si algún campo específico está vacío
         if any(not campo for campo in campos):
             return render.registro(error="Todos los campos son obligatorios. Por favor, completa todos los campos.")
-
-        # Validar correo electrónico
-        import re
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
             return render.registro(error="Ingresa un correo válido")
-
-        # Validar que las contraseñas coincidan
         if password != confirmar:
             return render.registro(error="Las contraseñas no coinciden")
-
         try:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db_usuarios()
             cur = con.cursor()
             cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
-            return web.seeother("/")  # Redirige a la página de inicio de sesión
+            return web.seeother("/")
         except sqlite3.IntegrityError as e:
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
@@ -181,23 +250,23 @@ class InicioSesion:
         form = web.input()
         correo = form.get('correo', '').strip()
         password = form.get('password', '').strip()
-
         if not correo or not password:
             return render.inicio_sesion(error="Llena los campos para continuar")
-
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
             return render.inicio_sesion(error="Ingresa un correo válido")
-
         try:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db_usuarios()
             cur = con.cursor()
-            cur.execute("SELECT password FROM usuarios WHERE correo=?", (correo,))
+            cur.execute("SELECT id_usuario, password, usuario FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
-
-            if row and row[0] == password:
-                return render.info_secion()
+            if row and row['password'] == password:
+                # Actualiza la sesión con el usuario y su id
+                user_session.usuario = row['usuario']
+                user_session.id_usuario = row['id_usuario']
+                user_session.inicio = int(time.time())
+                return web.seeother("/info_secion")
             else:
                 return render.inicio_sesion(error="Correo o contraseña incorrecta")
         except Exception as e:
@@ -213,31 +282,23 @@ class LeccionRapida:
 
 class PerfilUser:
     def GET(self):
-        correo = None
-        try:
-            correo = user_session.usuario
-        except Exception:
-            pass
+        correo = getattr(user_session, 'usuario', None)
         nombre = None
         estado = None
         mensaje = None
         if correo:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db_usuarios()
             cur = con.cursor()
             cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
             if row:
-                nombre = row[0]
-                estado = row[1] if len(row) > 1 else ""
+                nombre = row['nombre'] if 'nombre' in row.keys() else None
+                estado = row['estado'] if 'estado' in row.keys() else ""
         return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
 
     def POST(self):
-        correo = None
-        try:
-            correo = user_session.usuario
-        except Exception:
-            pass
+        correo = getattr(user_session, 'usuario', None)
         form = web.input()
         nuevo_nombre = form.get('nuevo_nombre', '').strip()
         nuevo_estado = form.get('nuevo_estado', '').strip()
@@ -247,16 +308,32 @@ class PerfilUser:
         # Si se solicita borrar la cuenta
         if borrar_usuario and password and correo:
             try:
-                con = sqlite3.connect("usuarios.db")
+                con = get_db_usuarios()
                 cur = con.cursor()
                 cur.execute("SELECT id_usuario FROM usuarios WHERE correo=? AND password=?", (correo, password))
                 row = cur.fetchone()
                 if not row:
                     con.close()
                     return render.perfil_user(error="Correo o contraseña incorrectos")
-                id_usuario = row[0]
-                cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
-                cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
+                id_usuario = row['id_usuario'] if 'id_usuario' in row.keys() else row[0]
+                # Eliminar datos relacionados en otras tablas si es necesario
+                con.close()
+                # Eliminar en tiempo.db y lecciones.db
+                con_t = get_db_tiempo()
+                cur_t = con_t.cursor()
+                cur_t.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
+                cur_t.commit()
+                con_t.close()
+                con_l = get_db_lecciones()
+                cur_l = con_l.cursor()
+                cur_l.execute("DELETE FROM lecciones_completadas WHERE id_usuario=?", (id_usuario,))
+                cur_l.execute("DELETE FROM actividades WHERE id_usuario=?", (id_usuario,))
+                cur_l.execute("DELETE FROM prompt WHERE id_usuario=?", (id_usuario,))
+                con_l.commit()
+                con_l.close()
+                # Finalmente eliminar el usuario
+                con = get_db_usuarios()
+                cur = con.cursor()
                 cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
                 con.commit()
                 con.close()
@@ -265,7 +342,7 @@ class PerfilUser:
                 return render.perfil_user(error=f"Error al borrar la cuenta: {e}")
         # Si se solicita actualizar nombre o estado
         if correo and (nuevo_nombre or nuevo_estado):
-            con = sqlite3.connect("usuarios.db")
+            con = get_db_usuarios()
             cur = con.cursor()
             if nuevo_nombre:
                 cur.execute("UPDATE usuarios SET nombre=? WHERE correo=?", (nuevo_nombre, correo))
@@ -276,21 +353,21 @@ class PerfilUser:
             row = cur.fetchone()
             con.close()
             mensaje = "Datos actualizados correctamente."
-            nombre = row[0] if row else None
-            estado = row[1] if row and len(row) > 1 else ""
+            nombre = row['nombre'] if row and 'nombre' in row.keys() else None
+            estado = row['estado'] if row and 'estado' in row.keys() else ""
             return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
         # Si no hay cambios, solo muestra la info
         nombre = None
         estado = None
         if correo:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db_usuarios()
             cur = con.cursor()
             cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
             if row:
-                nombre = row[0]
-                estado = row[1] if len(row) > 1 else ""
+                nombre = row['nombre'] if 'nombre' in row.keys() else None
+                estado = row['estado'] if 'estado' in row.keys() else ""
         return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
 
 def obtener_info_leccion(id_leccion):
@@ -301,16 +378,16 @@ def obtener_info_leccion(id_leccion):
         id_usuario = user_session.id_usuario
     except Exception:
         pass
-    con = sqlite3.connect("lecciones.db")
+    con = get_db_lecciones()
     cur = con.cursor()
     cur.execute("SELECT contenido FROM lecciones WHERE id_leccion=?", (id_leccion,))
     row = cur.fetchone()
-    contenido = row[0] if row else ""
+    contenido = row["contenido"] if row and "contenido" in row.keys() else (row[0] if row else "")
     con.close()
     tiempo_total = 0
     completada = False
     if id_usuario:
-        con2 = sqlite3.connect("tiempo.db")
+        con2 = get_db_tiempo()
         cur2 = con2.cursor()
         cur2.execute("SELECT SUM(tiempo) FROM tiempo_leccion WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
         row = cur2.fetchone()
@@ -1086,6 +1163,29 @@ class ApiChat:
         if not mensaje_usuario:
             return json.dumps({"respuesta": "Por favor, escribe un mensaje o usa /start para comenzar."})
 
+        # Guardar el prompt en la base de datos con el texto
+        id_usuario = getattr(user_session, 'id_usuario', None)
+        try:
+            con = get_db_lecciones()
+            cur = con.cursor()
+            cur.execute("INSERT INTO prompt (id_usuario, texto) VALUES (?, ?)", (id_usuario, mensaje_usuario))
+            con.commit()
+            con.close()
+        except Exception:
+            pass
+
+        # Obtener historial de prompts previos del usuario
+        historial = []
+        try:
+            con = get_db_lecciones()
+            cur = con.cursor()
+            cur.execute("SELECT texto FROM prompt WHERE id_usuario=? ORDER BY id ASC LIMIT 10", (id_usuario,))
+            rows = cur.fetchall()
+            historial = [row[0] for row in rows if row[0]]
+            con.close()
+        except Exception:
+            pass
+
         # ───────────────────────────── /help ─────────────────────────────
         if mensaje_usuario.lower() == "/help":
             guia = """
@@ -1102,7 +1202,6 @@ Este asistente te ayuda a redactar prompts efectivos para generar interfaces com
 "Una página con encabezado oscuro que diga 'Mi Tienda', un botón azul al centro
 que al hacer clic muestre una alerta JS."
 """
-            # Aquí SÍ escapamos porque incluye < > que no queremos interpretar
             return json.dumps({"respuesta": html.escape(guia)})
 
         # ───────────────────────────── /start ────────────────────────────
@@ -1133,27 +1232,22 @@ que al hacer clic muestre una alerta JS."
                 "Redacta un prompt que permita generar una interfaz como esta. "
                 "Luego recibirás una calificación (1–10) y el código correspondiente.<br><br>"
             )
-
             iframe = (
                 f'<iframe sandbox="allow-scripts allow-same-origin" '
                 f'style="width:100%;max-width:800px;height:400px;'
                 f'border:1px solid #ccc;border-radius:10px;" '
                 f'srcdoc="{(ejemplo_html)}"></iframe>'
             )
-
-            # NO escapamos todo el bloque porque queremos que el iframe se renderice
             return json.dumps({"respuesta": instrucciones + iframe})
 
         # ─────────────── Evaluación del prompt + generación de código ───────────────
         try:
             api_key = os.getenv("GROQ_API_KEY")
             modelo  = os.getenv("GROQ_MODEL", "llama3-8b-8192")
-
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
-
             prompt_sistema = (
                 "Eres un experto en prompt engineering aplicado al desarrollo web. "
                 "Primero evalúa el prompt del usuario con base en claridad, precisión y estructura. "
@@ -1167,18 +1261,22 @@ que al hacer clic muestre una alerta JS."
                 "(bloque completo desde <!DOCTYPE html> hasta </html>)"
                 "3. recomendaciones:\n"
             )
+            # Construir historial para contexto conversacional
+            mensajes_contexto = []
+            for texto in historial[:-1]:
+                mensajes_contexto.append({"role": "user", "content": texto})
+            mensajes_contexto.append({"role": "user", "content": mensaje_usuario})
 
             payload = {
                 "model": modelo,
                 "messages": [
                     {"role": "system", "content": prompt_sistema},
-                    {"role": "user",   "content": mensaje_usuario}
+                    *mensajes_contexto
                 ],
                 "max_tokens": 4096,
                 "temperature": 0.4,
                 "top_p": 1.0
             }
-
             resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers=headers, json=payload, timeout=30
@@ -1186,25 +1284,21 @@ que al hacer clic muestre una alerta JS."
             resp.raise_for_status()
             data = resp.json()
             respuesta = data["choices"][0]["message"]["content"].strip()
-
             if data["choices"][0].get("finish_reason") == "length":
                 respuesta += (
                     "\n\n⚠️ La respuesta fue truncada. Intenta dividir tu prompt "
                     "o aumentar max_tokens."
                 )
-
-            # Escapamos porque puede contener <html> y luego el frontend lo pintará en iframe
             return json.dumps({"respuesta": html.escape(respuesta)})
-
         except Exception as e:
             return json.dumps({"respuesta": f"Error al procesar la solicitud: {e}"})
 
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
+    inicializar_tablas()
     app = web.application(urls, globals())
     store = web.session.DiskStore('sessions')
     user_session = web.session.Session(app, store, initializer={'usuario': None, 'id_usuario': None, 'inicio': None})
-    # Usar el middleware Session para que web.ctx.session esté disponible en cada petición
     app.add_processor(user_session._processor)
     app.run()
