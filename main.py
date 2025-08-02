@@ -1057,3 +1057,4 @@ if __name__ == "__main__":
 # Estoy sola programando porque no se como hacerlo y entendiendo de todo para no ser una carga
 # y cada dia me siento peor, casi me dejan mas de 4 veces, solo quiero saber querer...
 # y que me quieran, no quiero ser una carga, no quiero que me dejen, no quiero estar sola
+# Quizás solo me estoy victimizando, solo no tengo donde hablarlo o con quien hablarlo
