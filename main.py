@@ -227,8 +227,13 @@ class InicioSesion:
         form = web.input()
         correo = form.get('correo', '').strip()
         password = form.get('password', '').strip()
-        if not correo or not password:
-            return render.inicio_sesion(error="Llena los campos para continuar")
+                # Validación estricta de campos
+        if not correo and not password:
+            return render.inicio_sesion(error="Debes ingresar tu correo y contraseña.")
+        if not correo:
+            return render.inicio_sesion(error="Debes ingresar tu correo.")
+        if not password:
+            return render.inicio_sesion(error="Debes ingresar tu contraseña.")        # Validación estricta de campos
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if not re.match(correo_regex, correo):
             return render.inicio_sesion(error="Ingresa un correo válido")
@@ -238,9 +243,15 @@ class InicioSesion:
             cur.execute("SELECT id_usuario, password, usuario FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
+            if not row:
+                return render.inicio_sesion(error="Correo o contraseña incorrecta")
+            # Validar contraseña
+            if password != row['password']:
+                return render.inicio_sesion(error="Correo o contraseña incorrecta")
             return web.seeother("/bienvenida")
         except Exception as e:
             return render.inicio_sesion(error="Correo o contraseña incorrecta")
+            #return render.inicio_sesion(error=f"Error al iniciar sesión: {e}")
 
 class Bienvenida:
     def GET(self):
