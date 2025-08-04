@@ -45,6 +45,7 @@ urls = (
     # Mapeo de rutas principales de la aplicación
     '/', 'Index', # Página principal
     '/inicio_sesion', 'InicioSesion', # Inicio de sesión
+    '/registro', 'Registro', #Pantalla de registro
     '/bienvenida', 'Bienvenida', # Vista de bienvenida
     '/static/(.*)', 'Static', # Archivos estáticos (imágenes, iconos, etc)
     '/cambiar_contraseña', 'cambiarcontraseña', # Cambio de contraseña

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
+  <title>BIENVENIDO A CODIPROMPT</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #120c2b, #6d8aa9);
+      color: #fff;
+      text-align: center;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 98%;
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 1000;
+    }
+
+    .logo {
+      height: 100px;
+    }
+
+    header button {
+      width: 120px;
+      height: 30px;
+      margin-left: 10px;
+      margin-right: 20px;
+      font-size: 12px;
+      padding: 8px 16px;
+      background: #fff;
+      color: #333;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    header button:hover {
+      background: #e0e0e0;
+      transform: scale(1.05);
+    }
+
+    .main-content {
+      margin-top: 140px;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      margin: 30px auto;
+      width: 80%;
+      max-width: 800px;
+      text-align: left;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .video-placeholder {
+      margin: 20px auto;
+      width: 80%;
+      max-width: 600px;
+      height: 150px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+    }
+
+    .lessons {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin: 40px 0;
+    }
+
+    .lesson-card {
+      background-color: rgba(255, 255, 255, 0.15);
+      padding: 20px 40px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .lesson-card:hover {
+      background-color: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+
+    footer {
+      margin: 40px auto 20px;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <!-- Encabezado -->
+  <header>
+    <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
+    <div>
+      <a href="/registro"><button>Registrarse</button></a>
+      <a href="/inicio_sesion"><button>Iniciar sesión</button></a>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <div class="main-content">
+    <h1>BIENVENIDO A CODIPROMPT</h1>
+    
+    <div class="section">
+      <p>Aquí no solo escribimos código: lo exploramos, lo desmenuzamos y lo convertimos en conocimiento que transforma. Esta plataforma nace para impulsar tu habilidad en programación, fomentar el pensamiento crítico y promover el uso responsable de la inteligencia artificial.</p>
+    </div>
+
+    <div class="section">
+      <h2>¿Qué encontraras aquí?</h2>
+      <ul>
+        <li>Ejercicios diseñados para retarte e inspirarte</li>
+        <li>Validación de prompts que estimulan la mente</li>
+        <li>Análisis de código que revelan lo que hay bajo la superficie</li>
+        <li>Ayuda de la IA para el uso responsable</li>
+        <li>¡Y un espacio donde aprender es sinónimo de empoderar!</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Video Tutorial de Uso:</h2>
+      <div class="video-placeholder">
+        [Video tutorial aparecerá aquí]
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>¡EMPIEZA TUS LECCIONES!</h2>
+      <div class="lessons">
+        <div class="lesson-card">Lección Rapida</div>
+        <div class="lesson-card">Lección Personalizada</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 CodiPROMPT - Todos los derechos reservados</p>
+  </footer>
+</body>
+</html>
