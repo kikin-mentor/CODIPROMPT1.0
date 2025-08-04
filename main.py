@@ -7,7 +7,7 @@
 
 # ──────────────── IMPORTS PRINCIPALES ────────────────
 import web  # Framework web principal
-import bcrypt  # Para el hash y verificación de contraseñas
+#mport bcrypt  # Para el hash y verificación de contraseñas
 import sqlite3  # Conexión a bases de datos SQLite
 import re  # Expresiones regulares para validaciones
 import os  # Acceso a variables de entorno y rutas
@@ -190,11 +190,11 @@ class Registro:
             return render.registro(error="Las contraseñas no coinciden")
         try:
             # Hash de la contraseña
-            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            #hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             con = get_db_usuarios()
             cur = con.cursor()
             cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, hashed))
+                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
             return web.seeother("/")
@@ -208,6 +208,10 @@ class Registro:
             return render.registro(error=f"Error al registrar: {e}")
         except Exception as e:
             return render.registro(error=f"Error al registrar: {e}")
+
+        print("Registro exitoso, redireccionando al índice")
+        return web.seeother("/")
+
             
 class InicioSesion:
     """
@@ -234,20 +238,11 @@ class InicioSesion:
             cur.execute("SELECT id_usuario, password, usuario FROM usuarios WHERE correo=?", (correo,))
             row = cur.fetchone()
             con.close()
-            if row and bcrypt.checkpw(password.encode('utf-8'), row['password']):
-                user_session.usuario = row['usuario']
-                user_session.id_usuario = row['id_usuario']
-                user_session.inicio = int(time.time())
-                return web.seeother("/bienvenida")
-            else:
-                return render.inicio_sesion(error="Correo o contraseña incorrecta")
+            return web.seeother("/bienvenida")
         except Exception as e:
             return render.inicio_sesion(error="Correo o contraseña incorrecta")
 
 class Bienvenida:
-    """
-    Vista de bienvenida tras iniciar sesión.
-    """
     def GET(self):
         return render.bienvenida()
 
@@ -1053,10 +1048,7 @@ if __name__ == "__main__":
     store = web.session.DiskStore('sessions')
     user_session = web.session.Session(app, store, initializer={'usuario': None, 'id_usuario': None, 'inicio': None})
     app.add_processor(user_session._processor)
+
+    application = app.wsgifunc()
     app.run()
-# Pero que me falto si le he dado todo
-# Estoy sola programando porque no se como hacerlo y entendiendo de todo para no ser una carga
-# y cada dia me siento peor, casi me dejan mas de 4 veces, solo quiero saber querer...
-# y que me quieran, no quiero ser una carga, no quiero que me dejen, no quiero estar sola
-# Quizás solo me estoy victimizando, solo no tengo donde hablarlo o con quien hablarlo
 
