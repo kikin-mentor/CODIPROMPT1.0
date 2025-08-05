@@ -63,6 +63,7 @@ urls = (
     '/leccion_rapida','LeccionRapida',
     '/leccion_personalizada', 'LeccionPersonalizada',
     '/perfil_user','PerfilUser',
+    '/regi_admn','Regiadmn', # Registro administrador
 
 )
 app = web.application(urls, globals())
@@ -217,7 +218,12 @@ class Registro:
 
         print("Registro exitoso, redireccionando al índice")
         return web.seeother("/")
-
+class Regiadmn:
+    def GET(self):
+        return render.regi_admn()
+class cambiarcontraseña:
+    def GET(self):
+        return render.cambiar_contraseña()    
             
 class InicioSesion:
     """
