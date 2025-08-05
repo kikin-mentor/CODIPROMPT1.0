@@ -1,9 +1,9 @@
-$def with (nombre=None, estado=None)
+$def with (nombre=None, estado=None, mensaje=None)
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
     <title>Mi Perfil - CODIPROMPT</title>
     <style>
@@ -14,7 +14,6 @@ $def with (nombre=None, estado=None)
             color: #fff;
             text-align: center;
         }
-
         header {
             position: fixed;
             top: 0;
@@ -24,35 +23,13 @@ $def with (nombre=None, estado=None)
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 20px;
+            padding: 20px;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             z-index: 1000;
         }
-
         .logo {
             height: 80px;
-        }
-
-        header button {
-            width: 120px;
-            height: 30px;
-            margin-left: 10px;
-            margin-right: 20px;
-            font-size: 12px;
-            padding: 8px 16px;
-            background: #fff;
-            color: #333;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        header button:hover {
-            background: #e0e0e0;
-            transform: scale(1.05);
         }
         .profile-container {
             margin-top: 180px;
@@ -63,10 +40,7 @@ $def with (nombre=None, estado=None)
             border-radius: 15px;
             padding: 30px;
             width: 300px;
-            text-align: center;
-            color: #fff;
         }
-
         .profile-picture {
             width: 90px;
             height: 90px;
@@ -76,14 +50,12 @@ $def with (nombre=None, estado=None)
             position: relative;
             overflow: hidden;
         }
-
         .profile-picture img {
             width: 90px;
             height: 90px;
             object-fit: cover;
             border-radius: 50%;
         }
-
         .camera-icon {
             position: absolute;
             bottom: 6px;
@@ -95,58 +67,17 @@ $def with (nombre=None, estado=None)
             font-size: 10px;
             color: #fff;
         }
-
-        .camera-icon:hover {
-            background: rgba(0, 0, 0, 0.9);
-        }
-
-        #file-input {
-            display: none;
-        }
-
+        #file-input { display: none; }
         .user-name {
             margin-top: 10px;
             font-size: 1.2em;
             font-weight: bold;
         }
-
         .form-group {
             margin: 15px 0;
             text-align: left;
         }
-
-        .form-group #opt_est{
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            border: none;
-            background: rgba(255, 255, 255, 0.3);
-            color: #fff;
-        }
-
-        .form-group .opt{
-            color: #000;
-        }
-
-        .form-group #opt_esta{
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            border: none;
-            background: rgba(255, 255, 255, 0.3);
-            color: #fff;
-        }
-
-        .form-group #opt_esta .esta{
-            color: #000;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .form-group input {
+        .form-group input, .form-group select {
             width: 95%;
             padding: 8px;
             border-radius: 5px;
@@ -154,13 +85,15 @@ $def with (nombre=None, estado=None)
             background: rgba(255, 255, 255, 0.3);
             color: #fff;
         }
-
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
         .buttons {
             display: flex;
             justify-content: space-between;
             margin-top: 20px;
         }
-
         .btn {
             flex: 1;
             padding: 10px;
@@ -170,98 +103,79 @@ $def with (nombre=None, estado=None)
             cursor: pointer;
             font-weight: bold;
         }
-
-        .btn-change {
-            background-color: #2c3e50;
-            color: #fff;
-        }
-
-        .btn-delete {
-            background-color: #e74c3c;
-            color: #fff;
-        }
+        .btn-change { background-color: #2c3e50; color: #fff; }
+        .btn-delete { background-color: #e74c3c; color: #fff; }
     </style>
 </head>
 <body>
-    <header>
-        <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
-    </header>
-    <div class="profile-container">
-        <div class="profile-picture">
-            <img src="../static/icons/user_white_light.png" alt="Perfil-User" id="profile-img">
-            <div class="camera-icon" id="camera-btn">📷</div>
-            <input type="file" id="file-input" accept="image/*">
-        </div>
-        $if nombre:
-            <div class="user-name">$nombre</div>
-        $else:
-            <div class="user-name">Usuario no disponible</div>
-
-        <div class="form-group">
-            <label for="nombre">Cambiar Nombre:</label>
-            <input type="text" id="nombre" value="Usuario_1">
-        </div>
-
-        <div class="form-group">
-            <label for="estado">Estado actual:</label>
-            $if estado:
-                <p>$estado</p>
-            $else:
-                <p>No disponible</p>
-        </div>
-        $if mensaje:
-            <div style="color:green;font-weight:bold;">$mensaje</div>
-        $else:
-            <div></div>
-
-        <div class="form-group">
-            <label for="estadisticas">Estadísticas cada:</label>
-            <select class="opciones_est" id="opt_est">
-                <option value="optio">Selecciona un periodo de tiempo</option>
-                <option class="opt" value="semana">Semana</option>
-                <option class="opt" value="mes">Mes</option>
-                <option class="opt" value="anio">Año</option>
-            </select>
-        </div>
-
-        <div class="buttons">
-            <button class="btn btn-change" onclick="location.href='/cambiar_contraseña'">Cambiar Contraseña</button>
-            <button class="btn btn-delete">Borrar Cuenta</button>
-        </div>
-
-        <script>
-            // Botón de cambiar contraseña
-            /*document.querySelector('.btn-change').addEventListener('click', function() {
-                alert('Funcionalidad de cambio de contraseña no implementada.');
-            });*/
-
-            // Botón de borrar cuenta
-            document.querySelector('.btn-delete').addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que quieres borrar tu cuenta?')) {
-                    alert('Cuenta borrada.');
-                }
-            });
-
-            // Cambio de foto de perfil
-            const fileInput = document.getElementById('file-input');
-            const profileImg = document.getElementById('profile-img');
-            const cameraBtn = document.getElementById('camera-btn');
-
-            cameraBtn.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            fileInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        profileImg.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        </script>
+<header>
+    <img src="/static/logo.png" alt="Logo Codiprompt" class="logo">
+</header>
+<div class="profile-container">
+    <div class="profile-picture">
+        <img src="/static/icons/user_white_light.png" alt="Perfil-User" id="profile-img">
+        <div class="camera-icon" id="camera-btn">📷</div>
+        <input type="file" id="file-input" accept="image/*">
     </div>
+
+    $if nombre:
+        <div class="user-name">$nombre</div>
+    $else:
+        <div class="user-name">Usuario no disponible</div>
+
+    <div class="form-group">
+        <label for="nombre">Cambiar Nombre:</label>
+        <input type="text" id="nombre" value="$nombre">
+    </div>
+
+    <div class="form-group">
+        <label for="estado">Estado actual:</label>
+        $if estado:
+            <p>$estado</p>
+        $else:
+            <p>No disponible</p>
+    </div>
+
+    $if mensaje:
+        <div style="color:green;font-weight:bold;">$mensaje</div>
+
+    <div class="form-group">
+        <label for="estadisticas">Estadísticas cada:</label>
+        <select id="opt_est">
+            <option value="">Selecciona un periodo de tiempo</option>
+            <option value="semana">Semana</option>
+            <option value="mes">Mes</option>
+            <option value="anio">Año</option>
+        </select>
+    </div>
+
+    <div class="buttons">
+        <button class="btn btn-change" onclick="location.href='/cambiar_contraseña'">Cambiar Contraseña</button>
+        <button class="btn btn-delete">Borrar Cuenta</button>
+    </div>
+
+    <script>
+        document.querySelector('.btn-delete').addEventListener('click', function () {
+            if (confirm('¿Estás seguro de que quieres borrar tu cuenta?')) {
+                alert('Cuenta borrada.');
+            }
+        });
+
+        document.getElementById('camera-btn').onclick = () => {
+            document.getElementById('file-input').click();
+        };
+
+        document.getElementById('file-input').addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('profile-img').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</div>
 </body>
 </html>

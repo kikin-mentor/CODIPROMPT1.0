@@ -33,7 +33,6 @@ Plataforma interactiva para aprender programación mediante lecciones y activida
 1. Instala las dependencias necesarias (ver requieriment.txt).
 2. Ejecuta `main.py` para iniciar el servidor web.
 3. Accede desde tu navegador a la URL indicada por el servidor.
-4. liz ya quedo loca estas vacaciones, casi la dejan y ya ha chillado en el codigo como 200 veces.
 
 ## se ejecuta con
 ````bash

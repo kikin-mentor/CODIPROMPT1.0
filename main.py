@@ -60,7 +60,13 @@ urls = (
     '/actividad9', 'actividad9', # Actividad 9
     '/api_chat', 'ApiChat', # API para chat
     '/perfil_estadisticas', 'PerfilEstadisticas', # Estadísticas de usuario
+    '/leccion_rapida','LeccionRapida',
+    '/leccion_personalizada', 'LeccionPersonalizada',
+    '/perfil_user','PerfilUser',
+
 )
+app = web.application(urls, globals())
+session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'usuario': None, 'id_usuario': None})##esto es par el perfilñ de usuario 
 
 ## Funciones centralizadas para obtener conexiones a cada base de datos
 ## Permiten acceder a las distintas bases de datos del sistema
@@ -263,48 +269,54 @@ class LeccionRapida:
 
 class PerfilUser:
     def GET(self):
-        correo = getattr(user_session, 'usuario', None)
+        correo = session.get('usuario')
         if not correo:
             return web.seeother('/inicio_sesion')
+
         nombre = None
         estado = None
         mensaje = None
+
         con = get_db_usuarios()
+        con.row_factory = sqlite3.Row
         cur = con.cursor()
         cur.execute("SELECT nombre, estado FROM usuarios WHERE correo=?", (correo,))
         row = cur.fetchone()
         con.close()
-        if row:
-            nombre = row['nombre'] if 'nombre' in row.keys() else None
-            estado = row['estado'] if 'estado' in row.keys() else ""
-        return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
 
-def obtener_info_leccion(id_leccion):
-    usuario = None
-    id_usuario = None
-    try:
-        usuario = user_session.usuario
-        id_usuario = user_session.id_usuario
-    except Exception:
-        pass
-    con = get_db_lecciones()
-    cur = con.cursor()
-    cur.execute("SELECT contenido FROM lecciones WHERE id_leccion=?", (id_leccion,))
-    row = cur.fetchone()
-    contenido = row["contenido"] if row and "contenido" in row.keys() else (row[0] if row else "")
-    con.close()
-    tiempo_total = 0
-    completada = False
-    if id_usuario:
-        con2 = get_db_tiempo()
-        cur2 = con2.cursor()
-        cur2.execute("SELECT SUM(tiempo) FROM tiempo_leccion WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
-        row = cur2.fetchone()
-        tiempo_total = row[0] if row and row[0] else 0
-        cur2.execute("SELECT 1 FROM lecciones_completadas WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
-        completada = bool(cur2.fetchone())
-        con2.close()
-    return contenido, tiempo_total, completada
+        if row:
+            nombre = row["nombre"]
+            estado = row["estado"]
+
+        return render.perfil_user(nombre=nombre, estado=estado, mensaje=mensaje)
+    def obtener_info_leccion(id_leccion):
+        usuario = session.get('usuario')
+        id_usuario = session.get('id_usuario')
+
+        con = get_db_lecciones()
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
+        cur.execute("SELECT contenido FROM lecciones WHERE id_leccion=?", (id_leccion,))
+        row = cur.fetchone()
+        contenido = row["contenido"] if row else ""
+        con.close()
+
+        tiempo_total = 0
+        completada = False
+
+        if id_usuario:
+            con2 = get_db_tiempo()
+            cur2 = con2.cursor()
+            cur2.execute("SELECT SUM(tiempo) FROM tiempo_leccion WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
+            row = cur2.fetchone()
+            tiempo_total = row[0] if row and row[0] else 0
+
+            cur2.execute("SELECT 1 FROM lecciones_completadas WHERE id_usuario=? AND id_leccion=?", (id_usuario, id_leccion))
+            completada = bool(cur2.fetchone())
+            con2.close()
+
+            return contenido, tiempo_total, completada
+
 
 class Leccion1:
     def GET(self):
