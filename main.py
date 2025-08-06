@@ -66,6 +66,10 @@ urls = (
     '/regi_admn','Regiadmn', # Registro administrador
 
 )
+
+load_dotenv()  # Cargar variables de entorno desde .env
+api_key = os.getenv("GROQ_API_KEY")  # Obtiene la API key para el modelo de IA
+
 app = web.application(urls, globals())
 session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'usuario': None, 'id_usuario': None})##esto es par el perfilñ de usuario 
 
