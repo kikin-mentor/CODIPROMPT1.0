@@ -152,8 +152,12 @@ $def with ()
       })
       .then(res => res.json())
       .then(data => {
-        addMessage(data.respuesta, 'bot');
-      })
+          if (data.limpiar) {
+            document.getElementById('chat-messages').innerHTML = '';
+            return;
+          }
+          addMessage(data.respuesta, 'bot');
+        })
       .catch(() => {
         addMessage("❌ Error al conectar con el servidor.", 'bot');
       });
@@ -172,6 +176,7 @@ $def with ()
       this.style.height = 'auto';
       this.style.height = this.scrollHeight + 'px';
     });
+    
   </script>
 </body>
 </html>

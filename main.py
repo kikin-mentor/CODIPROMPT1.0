@@ -6,11 +6,10 @@ import requests
 import json
 from dotenv import load_dotenv  
 import html
-import time
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify
-import plotly.graph_objs as go
-import plotly.io as pio
-import os
+#import time
+#from flask import Flask, render_template, request, redirect, session, url_for, jsonify
+#import plotly.graph_objs as go
+#import plotly.io as pio
 
 
 urls = (
@@ -47,115 +46,20 @@ render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
 modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # usa este modelo por defecto si no se encuentra la variable
 load_dotenv()  # Cargar variables de entorno desde .env
-
-
+# Esto va al inicio del archivo principal
+app = web.application(urls, globals()) 
+session = web.session.Session(
+    app,
+    web.session.DiskStore('/tmp/sessions_codiprompt'),  # ✅ sin conflictos de permisos
+    initializer={'usuario_id': None}
+)
 class Index:
     def GET(self):
         return render.index()
 
 class Registro:
     def GET(self):
-        return render.registro()
-    def POST(self):
-        form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
-            form.get('apellidos', '').strip(),
-            form.get('usuario', '').strip(),
-            form.get('plantel', '').strip(),
-            form.get('matricula', '').strip(),
-            form.get('correo', '').strip(),
-            form.get('password', '').strip(),
-            form.get('confirmar', '').strip()
-        ]
-        if any(not campo for campo in campos):
-            return render.registro(error="llena los campos para continuar")
-
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
-            return render.registro(error="Ingresa un correo válido")
-
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
-        if password != confirmar:
-            return render.registro(error="Las contraseñas no coinciden")
-
-        nombre = form.get('nombre', '').strip()
-        apellidos = form.get('apellidos', '').strip()
-        usuario = form.get('usuario', '').strip()
-        plantel = form.get('plantel', '').strip()
-        matricula = form.get('matricula', '').strip()
-
-        try:
-            con = sqlite3.connect("usuarios.db")
-            cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
-            con.commit()
-            con.close()
-            return render.inicio_sesion()
-        except sqlite3.IntegrityError as e:
-            if 'usuario' in str(e):
-                return render.registro(error="El nombre de usuario ya existe")
-            if 'correo' in str(e):
-                return render.registro(error="El correo ya está registrado")
-            if 'matricula' in str(e):
-                return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error al registrar: {e}")
-        except Exception as e:
-            return render.registro(error=f"Error al registrar: {e}")
-
-    def POST(self):
-        form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
-            form.get('apellidos', '').strip(),
-            form.get('usuario', '').strip(),
-            form.get('plantel', '').strip(),
-            form.get('matricula', '').strip(),
-            form.get('correo', '').strip(),
-            form.get('password', '').strip(),
-            form.get('confirmar', '').strip()
-        ]
-        if any(not campo for campo in campos):
-            return render.registro(error="llena los campos para continuar")
-
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
-            return render.registro(error="Ingresa un correo válido")
-
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
-        if password != confirmar:
-            return render.registro(error="Las contraseñas no coinciden")
-
-        nombre = form.get('nombre', '').strip()
-        apellidos = form.get('apellidos', '').strip()
-        usuario = form.get('usuario', '').strip()
-        plantel = form.get('plantel', '').strip()
-        matricula = form.get('matricula', '').strip()
-
-        try:
-            con = sqlite3.connect("usuarios.db")
-            cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
-            con.commit()
-            con.close()
-            return render.inicio_sesion()
-        except sqlite3.IntegrityError as e:
-            if 'usuario' in str(e):
-                return render.registro(error="El nombre de usuario ya existe")
-            if 'correo' in str(e):
-                return render.registro(error="El correo ya está registrado")
-            if 'matricula' in str(e):
-                return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error al registrar: {e}")
-        except Exception as e:
-            return render.registro(error=f"Error al registrar: {e}")
-
+            return render.registro()
 class InicioSesion:
     def GET(self):
         return render.inicio_sesion()
@@ -166,8 +70,9 @@ class InicioSesion:
         password = form.password.strip()
 
         if not usuario or not password:
-            return render.inicio_sesion(error="llena los campos para continuar")
+            return render.inicio_sesion(error="Llena los campos para continuar")
 
+        # Validación opcional solo si el usuario ingresó un correo
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if '@' in usuario and not re.match(correo_regex, usuario):
             return render.inicio_sesion(error="Ingresa un correo válido")
@@ -175,16 +80,19 @@ class InicioSesion:
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
-            cur.execute("SELECT password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
+            cur.execute("SELECT id_usuario, password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
             row = cur.fetchone()
             con.close()
 
-            if row and row[0] == password:
-                return render.info_secion()
+            if row and row[1] == password:
+                session.usuario_id = row[0]  # ✅ Sesión iniciada correctamente
+                print("DEBUG >> sesión iniciada con usuario_id:", session.usuario_id)
+                return web.seeother('/info_secion')  # O redirige a /perfil_user si quieres
             else:
-                return render.inicio_sesion(error="usuario o contraseña incorrecta")
+                return render.inicio_sesion(error="Usuario o contraseña incorrecta")
+
         except Exception as e:
-            return render.inicio_sesion(error="usuario o contraseña incorrecta")
+            return render.inicio_sesion(error="Error al procesar los datos")
 
 class InfoSecion:
     def GET(self):
@@ -193,37 +101,76 @@ class InfoSecion:
 class LeccionRapida:
     def GET(self):
         return render.leccion_rapida()
-
+def get_db():
+        con = sqlite3.connect("usuarios.db")
+        con.row_factory = sqlite3.Row
+        return con
 class PerfilUser:
+    
     def GET(self):
-        return render.perfil_user()
+        print("DEBUG >> session.usuario_id:", session.get('usuario_id'))
+        if hasattr(session, 'usuario_id') and session.usuario_id:
+            usuario_id = session.usuario_id
+            con = get_db()
+            cur = con.cursor()
+            cur.execute("SELECT usuario FROM usuarios WHERE id_usuario=?", (usuario_id,))
+            row = cur.fetchone()
+            con.close()
+            nombre_usuario = row['usuario'] if row else "usuario"
+            return render.perfil_user(usuario=nombre_usuario)
+        else:
+            return web.seeother('/inicio_sesion')
 
     def POST(self):
+        if not hasattr(session, 'usuario_id') or not session.usuario_id:
+            return web.seeother('/inicio_sesion')
+
         form = web.input()
+        usuario_id = session.usuario_id
+
+        # ───── Cambio de nombre ─────
+        if 'nombre' in form:
+            nuevo_nombre = form.get('nombre', '').strip()
+            if nuevo_nombre:
+                try:
+                    con = get_db()
+                    cur = con.cursor()
+                    cur.execute("UPDATE usuarios SET usuario=? WHERE id_usuario=?", (nuevo_nombre, usuario_id))
+                    con.commit()
+                    con.close()
+                    return web.seeother('/perfil_user')
+                except Exception as e:
+                    return render.perfil_user(usuario=nuevo_nombre, error=f"Error al actualizar nombre: {e}")
+            else:
+                return render.perfil_user(usuario=form.get('nombre'), error="El nombre no puede estar vacío")
+
+        # ───── Borrado de cuenta ─────
         usuario = form.get('usuario', '').strip()
         password = form.get('password', '').strip()
+
         if not usuario or not password:
-            return render.perfil_user(error="Debes ingresar usuario y contraseña para borrar la cuenta")
+            return render.perfil_user(usuario=form.get('nombre'), error="Debes ingresar usuario y contraseña para borrar la cuenta")
+
         try:
             con = get_db()
             cur = con.cursor()
-            # Verifica que el usuario y contraseña sean correctos
             cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
             row = cur.fetchone()
             if not row:
                 con.close()
-                return render.perfil_user(error="Usuario o contraseña incorrectos")
+                return render.perfil_user(usuario=form.get('nombre'), error="Usuario o contraseña incorrectos")
+
             id_usuario = row['id_usuario']
-            # Borra datos relacionados (tiempo_de_uso, sesiones, etc.)
             cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
             cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
-            # Borra el usuario
             cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
             con.commit()
             con.close()
+            session.kill()
             return render.index(mensaje="Cuenta eliminada correctamente")
+
         except Exception as e:
-            return render.perfil_user(error=f"Error al borrar la cuenta: {e}")
+            return render.perfil_user(usuario=form.get('nombre'), error=f"Error al borrar la cuenta: {e}")
 
 class Leccion1:
     def GET(self):
@@ -818,16 +765,24 @@ class actividad9:
 
         except Exception as e:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
-
+start_activate = False
 
 class ApiChat:
     def POST(self):
         data = web.input()
         mensaje_usuario = data.get("mensaje", "").strip()
-
+        global start_activate 
         if not mensaje_usuario:
             return json.dumps({"respuesta": "Por favor, escribe un mensaje o usa /start para comenzar."})
 
+        # ───────────────────────────── /clear ─────────────────────────────
+        if mensaje_usuario.lower() == "/clear":
+            start_activate = False
+        # Envía una bandera especial para que el frontend sepa que debe limpiar el chat
+            return json.dumps({
+            "respuesta": "",  # No se mostrará ningún mensaje
+            "limpiar": True
+         })
         # ───────────────────────────── /help ─────────────────────────────
         if mensaje_usuario.lower() == "/help":
             guia = """
@@ -843,12 +798,17 @@ Este asistente te ayuda a redactar prompts efectivos para generar interfaces com
 ✅ Ejemplo de prompt efectivo:
 "Una página con encabezado oscuro que diga 'Mi Tienda', un botón azul al centro
 que al hacer clic muestre una alerta JS."
+
+🖥️ Comandos
+/help == da información sobre el chat 
+/start == comienza la lección
+/clear == limpia el chat 
 """
-            # Aquí SÍ escapamos porque incluye < > que no queremos interpretar
             return json.dumps({"respuesta": html.escape(guia)})
 
         # ───────────────────────────── /start ────────────────────────────
         if mensaje_usuario.lower() == "/start":
+            start_activate = True
             ejemplo_html = """
 <!DOCTYPE html>
 <html lang='es'>
@@ -883,8 +843,14 @@ que al hacer clic muestre una alerta JS."
                 f'srcdoc="{(ejemplo_html)}"></iframe>'
             )
 
-            # NO escapamos todo el bloque porque queremos que el iframe se renderice
             return json.dumps({"respuesta": instrucciones + iframe})
+
+        # ─────────────── Validar si no se ha usado /start ───────────────
+        if not any(cmd in mensaje_usuario.lower() for cmd in ["/start", "/help", "/clear"]) and not start_activate:
+            advertencia = (
+                "⚠️ Para iniciar, por favor ingresa el comando <strong>/start</strong> o usa <strong>/help</strong> para obtener más información."
+            )
+            return json.dumps({"respuesta": advertencia})
 
         # ─────────────── Evaluación del prompt + generación de código ───────────────
         try:
@@ -935,11 +901,11 @@ que al hacer clic muestre una alerta JS."
                     "o aumentar max_tokens."
                 )
 
-            # Escapamos porque puede contener <html> y luego el frontend lo pintará en iframe
             return json.dumps({"respuesta": html.escape(respuesta)})
 
         except Exception as e:
             return json.dumps({"respuesta": f"Error al procesar la solicitud: {e}"})
+
 
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────

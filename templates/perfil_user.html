@@ -1,4 +1,4 @@
-$def with ()
+$def with (value="$usuario")
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,8 +192,8 @@ $def with ()
             <div class="camera-icon" id="camera-btn">📷</div>
             <input type="file" id="file-input" accept="image/*">
         </div>
-        <div class="user-name">Usuario_1</div>
-
+        <div class="user-name">$usuario</div>
+        <input type="text" name="nombre" value="$usuario">
         <div class="form-group">
             <label for="nombre">Cambiar Nombre:</label>
             <input type="text" id="nombre" value="Usuario_1">

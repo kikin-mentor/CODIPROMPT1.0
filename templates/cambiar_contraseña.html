@@ -20,7 +20,7 @@ $def with (error=None)
             background: #fff;
             border-radius: 25px;
             padding: 32px 32px 24px 32px;
-            box-shadow: 0 4px 24px 0 rgb(255, 255, 255);
+            /*box-shadow: 0 4px 24px 0 rgb(255, 255, 255);*/
             width: 400px;
             display: flex;
             flex-direction: column;
@@ -98,5 +98,7 @@ $if error:
         <button type="submit">Actualizar Contraseña</button>
     </form>
     <div class="logo">
+        <a href="javascript:history.back()">
         <img src="/static/logo.png" alt="Logo CodiPROMPT" width="600" height="600">
+        </a>
     </div>
