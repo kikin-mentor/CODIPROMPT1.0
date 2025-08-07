@@ -70,24 +70,8 @@ $def with (error=None)
         .form-container .btn-iniciar:hover {
             background: #217622;
         }
-        .form-container .btn-registrate {
-            width: 100%;
-            background: #2176ff;
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            padding: 10px 0;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 0;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .form-container .btn-registrate:hover {
-            background: #1856b6;
-        }
         .forgot {
-            margin-top: 32px;
+            margin-top: 20px;
             background: #220a2e;
             color: #fff;
             border-radius: 16px;
@@ -115,12 +99,15 @@ $def with (error=None)
         <label for="password">Contraseña</label>
         <input type="password" id="password" name="password" required>
 
-        <button type="submit" class="btn-iniciar" href="/info_secion">Iniciar sesión</button>
-        <button type="button" class="btn-registrate" onclick="window.location.href='/registro'">Registrate</button>
+        <label for="password">Contraseña de administrador</label>
+        <input type="password" id="password" name="password" required>
+        <button type="submit" class="btn-iniciar" href="/datos">Iniciar sesión</button>
+        
     </form>
+    
+        
     <div class="olvidar">
-        <a href="/cambiar_contraseña" class="olvi">¿Olvidaste tu Contraseña?</a>
-        <a href="/iniciar_secion_admin" class="admin">¿iniciar como administrador?</a>
+        <a href="/info" class="Info">¿como iniciar como administrador?</a>
     </div>
 </body>
 </html>

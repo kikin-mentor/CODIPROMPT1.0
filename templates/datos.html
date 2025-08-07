@@ -1,0 +1,103 @@
+$def with (usuarios)
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuarios Registrados - CodiPROMPT</title>
+  <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      background: linear-gradient(to bottom, #120c2b, #0d4177);
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .usuario-box {
+      background-color: #220a2e;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    }
+
+    .usuario-box img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-right: 20px;
+      border: 2px solid #ffffff33;
+    }
+
+    .usuario-info {
+      flex-grow: 1;
+    }
+
+    .usuario-info h2 {
+      margin: 0 0 5px;
+      font-size: 22px;
+    }
+
+    .usuario-info p {
+      margin: 2px 0;
+      font-size: 16px;
+    }
+
+    .btn-estadisticas {
+      background-color: #2ecc71;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      text-decoration: none;
+    }
+
+    .btn-estadisticas:hover {
+      background-color: #27ae60;
+    }
+
+    @media (max-width: 600px) {
+      .usuario-box {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .usuario-box img {
+        margin: 0 auto 15px;
+      }
+
+      .btn-estadisticas {
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Usuarios Registrados</h1>
+
+  $for usuario in usuarios:
+    <div class="usuario-box">
+      <img src="/static/$usuario.foto" alt="Foto de perfil">
+      <div class="usuario-info">
+        <h2>$usuario.nombre</h2>
+        <p>Plantel: CONALEP 250</p>
+        <p>Registrado: $usuario.fecha_registro</p>
+      </div>
+      <a class="btn-estadisticas" href="/estadisticas_usuario?id=$usuario.id">Ver estadísticas completas</a>
+    </div>
+
+</body>
+</html>

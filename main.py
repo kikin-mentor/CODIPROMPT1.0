@@ -41,6 +41,9 @@ urls = (
     '/actividad8', 'actividad8',
     '/actividad9', 'actividad9',
     '/api_chat', 'ApiChat',
+    '/iniciar_secion_admin','IniciarSecionAdmin',
+    '/info','Info',
+    '/datos','Datos',
 )
 render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
@@ -58,6 +61,7 @@ class Index:
 class Registro:
     def GET(self):
             return render.registro()
+
 class InicioSesion:
     def GET(self):
         return render.inicio_sesion()
@@ -95,6 +99,14 @@ class InicioSesion:
 class InfoSecion:
     def GET(self):
         return render.info_secion()
+
+class Info:
+    def GET (self):
+        return render.info()
+
+class IniciarSecionAdmin:
+    def GET(self):
+        return render.iniciar_secion_admin()
 
 class LeccionRapida:
     def GET(self):
@@ -169,6 +181,10 @@ class PerfilUser:
 
         except Exception as e:
             return render.perfil_user(usuario=form.get('nombre'), error=f"Error al borrar la cuenta: {e}")
+
+class Datos:
+    def GET (self):
+        return render.datos()
 
 class Leccion1:
     def GET(self):
