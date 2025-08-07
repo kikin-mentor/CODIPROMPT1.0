@@ -60,7 +60,107 @@ class Index:
 
 class Registro:
     def GET(self):
-            return render.registro()
+        return render.registro()
+    def POST(self):
+        form = web.input()
+        campos = [
+            form.get('nombre', '').strip(),
+            form.get('apellidos', '').strip(),
+            form.get('usuario', '').strip(),
+            form.get('plantel', '').strip(),
+            form.get('matricula', '').strip(),
+            form.get('correo', '').strip(),
+            form.get('password', '').strip(),
+            form.get('confirmar', '').strip()
+        ]
+        if any(not campo for campo in campos):
+            return render.registro(error="llena los campos para continuar")
+
+        correo = form.get('correo', '').strip()
+        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
+        if not re.match(correo_regex, correo):
+            return render.registro(error="Ingresa un correo válido")
+
+        password = form.get('password', '').strip()
+        confirmar = form.get('confirmar', '').strip()
+        if password != confirmar:
+            return render.registro(error="Las contraseñas no coinciden")
+
+        nombre = form.get('nombre', '').strip()
+        apellidos = form.get('apellidos', '').strip()
+        usuario = form.get('usuario', '').strip()
+        plantel = form.get('plantel', '').strip()
+        matricula = form.get('matricula', '').strip()
+
+        try:
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            con.commit()
+            con.close()
+            return render.inicio_sesion()
+        except sqlite3.IntegrityError as e:
+            if 'usuario' in str(e):
+                return render.registro(error="El nombre de usuario ya existe")
+            if 'correo' in str(e):
+                return render.registro(error="El correo ya está registrado")
+            if 'matricula' in str(e):
+                return render.registro(error="La matrícula ya está registrada")
+            return render.registro(error=f"Error al registrar: {e}")
+        except Exception as e:
+            return render.registro(error=f"Error al registrar: {e}")
+
+    def POST(self):
+        form = web.input()
+        campos = [
+            form.get('nombre', '').strip(),
+            form.get('apellidos', '').strip(),
+            form.get('usuario', '').strip(),
+            form.get('plantel', '').strip(),
+            form.get('matricula', '').strip(),
+            form.get('correo', '').strip(),
+            form.get('password', '').strip(),
+            form.get('confirmar', '').strip()
+        ]
+        if any(not campo for campo in campos):
+            return render.registro(error="llena los campos para continuar")
+
+        correo = form.get('correo', '').strip()
+        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
+        if not re.match(correo_regex, correo):
+            return render.registro(error="Ingresa un correo válido")
+
+        password = form.get('password', '').strip()
+        confirmar = form.get('confirmar', '').strip()
+        if password != confirmar:
+            return render.registro(error="Las contraseñas no coinciden")
+
+        nombre = form.get('nombre', '').strip()
+        apellidos = form.get('apellidos', '').strip()
+        usuario = form.get('usuario', '').strip()
+        plantel = form.get('plantel', '').strip()
+        matricula = form.get('matricula', '').strip()
+
+        try:
+            con = sqlite3.connect("usuarios.db")
+            cur = con.cursor()
+            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            con.commit()
+            con.close()
+            return render.inicio_sesion()
+        except sqlite3.IntegrityError as e:
+            if 'usuario' in str(e):
+                return render.registro(error="El nombre de usuario ya existe")
+            if 'correo' in str(e):
+                return render.registro(error="El correo ya está registrado")
+            if 'matricula' in str(e):
+                return render.registro(error="La matrícula ya está registrada")
+            return render.registro(error=f"Error al registrar: {e}")
+        except Exception as e:
+            return render.registro(error=f"Error al registrar: {e}")
+
 
 class InicioSesion:
     def GET(self):
