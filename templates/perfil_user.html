@@ -1,4 +1,4 @@
-$def with (value="$usuario")
+$def with (usuario)
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -193,10 +193,9 @@ $def with (value="$usuario")
             <input type="file" id="file-input" accept="image/*">
         </div>
         <div class="user-name">$usuario</div>
-        <input type="text" name="nombre" value="$usuario">
         <div class="form-group">
             <label for="nombre">Cambiar Nombre:</label>
-            <input type="text" id="nombre" value="Usuario_1">
+            <input type="text" id="nombre1" value=$usuario>
         </div>
 
         <div class="form-group">
@@ -218,12 +217,17 @@ $def with (value="$usuario")
             </select>
         </div>
 
+        <form method="post">
         <div class="buttons">
-            <button class="btn btn-change" onclick="location.href='/cambiar_contraseña'">Cambiar Contraseña</button>
-            <button class="btn btn-delete">Borrar Cuenta</button>
+            <button class="btn btn-delete" name="borrar_cuenta" type="submit">Borrar Cuenta</button>
+            <button class="btn btn-change" name="cerrar_sesion" type="submit">Cerrar Sesión</button>
         </div>
-
-        <script>
+        </form>
+        <div class="buttons"> 
+        <button class="btn btn-change" formaction="/cambiar_contraseña" formmethod="get">Cambiar Contraseña</button>
+        </div>
+    
+    <script>
             // Botón de cambiar contraseña
             /*document.querySelector('.btn-change').addEventListener('click', function() {
                 alert('Funcionalidad de cambio de contraseña no implementada.');

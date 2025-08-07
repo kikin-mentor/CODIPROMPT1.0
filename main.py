@@ -47,12 +47,10 @@ api_key = os.getenv("GROQ_API_KEY")
 modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # usa este modelo por defecto si no se encuentra la variable
 load_dotenv()  # Cargar variables de entorno desde .env
 # Esto va al inicio del archivo principal
-app = web.application(urls, globals()) 
-session = web.session.Session(
-    app,
-    web.session.DiskStore('/tmp/sessions_codiprompt'),  # ✅ sin conflictos de permisos
-    initializer={'usuario_id': None}
-)
+web.config.debug = False
+app = web.application(urls, globals())
+session = web.session.Session(app, web.session.DiskStore("sessions"))
+
 class Index:
     def GET(self):
         return render.index()
@@ -72,7 +70,6 @@ class InicioSesion:
         if not usuario or not password:
             return render.inicio_sesion(error="Llena los campos para continuar")
 
-        # Validación opcional solo si el usuario ingresó un correo
         correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
         if '@' in usuario and not re.match(correo_regex, usuario):
             return render.inicio_sesion(error="Ingresa un correo válido")
@@ -80,17 +77,18 @@ class InicioSesion:
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
-            cur.execute("SELECT id_usuario, password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
+            cur.execute("SELECT id_usuario, usuario, password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
             row = cur.fetchone()
             con.close()
 
-            if row and row[1] == password:
-                session.usuario_id = row[0]  # ✅ Sesión iniciada correctamente
-                print("DEBUG >> sesión iniciada con usuario_id:", session.usuario_id)
-                return web.seeother('/info_secion')  # O redirige a /perfil_user si quieres
+            if row and row[2] == password:
+                session.logged_in = True
+                session.usuario_id = row[0]
+                session.username = row[1]
+                print(">>> LOGIN CORRECTO. ID GUARDADO EN SESIÓN:", session.usuario_id)
+                return web.seeother('/info_secion')
             else:
                 return render.inicio_sesion(error="Usuario o contraseña incorrecta")
-
         except Exception as e:
             return render.inicio_sesion(error="Error al procesar los datos")
 
@@ -910,6 +908,4 @@ que al hacer clic muestre una alerta JS."
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
-
-    app = web.application(urls, globals())
     app.run()
