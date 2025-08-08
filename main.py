@@ -456,7 +456,7 @@ class actividad1:
             return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
@@ -503,17 +503,17 @@ class actividad1:
         
 class actividad2:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad2(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad2(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Escribe una noticia falsa (puede ser humorística, educativa o creativa). "
@@ -523,7 +523,7 @@ class actividad2:
     "<em> para opiniones o sentimientos, y <mark> para resaltar fechas o cifras."
 )
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad2(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -553,24 +553,24 @@ class actividad2:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad2(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad2(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad3:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad3(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad3(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         
         criterio = (
@@ -580,7 +580,7 @@ class actividad3:
             "y uno que lleve a otra sección de la misma página usando un id y href=\"#...\"."
         )
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad3(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -610,24 +610,24 @@ class actividad3:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad3(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad3(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad4:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad4(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad4(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Crea una lista desordenada (<ul>) con 4 cosas que usarías para acampar. "
@@ -637,7 +637,7 @@ class actividad4:
 )
 
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad4(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -667,24 +667,24 @@ class actividad4:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad4(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad4(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad5:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad5(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad5(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Diseña una tabla con los encabezados: Producto, Precio, Cantidad. "
@@ -692,7 +692,7 @@ class actividad5:
     "Utiliza border=\"1\" y aplica colspan o rowspan si deseas fusionar celdas."
 )     
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad5(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -722,24 +722,24 @@ class actividad5:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad5(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad5(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad6:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad6(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad6(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Incluye un formulario <form> con: "
@@ -750,7 +750,7 @@ class actividad6:
     "Usa <label> para cada campo y enlázalo con su id."
 )
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad6(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -780,24 +780,24 @@ class actividad6:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad6(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad6(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad7:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad7(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad7(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Dentro del <head>, agrega un bloque <style>. "
@@ -807,7 +807,7 @@ class actividad7:
 )
 
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad7(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -837,24 +837,24 @@ class actividad7:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad7(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad7(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad8:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad8(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad8(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Escribe una página con: un <header> con el título del sitio, "
@@ -863,7 +863,7 @@ class actividad8:
     "Agrega un <footer> con tu nombre y el año actual."
 )
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad8(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -893,24 +893,24 @@ class actividad8:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad8(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad8(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad9:
     def GET(self):
-        return render.actividad1(resultado=None, codigo_enviado="")
+        return render.actividad9(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
         codigo = form.codigo_html.strip()
 
         if not codigo:
-            return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+            return render.actividad9(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
         # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = "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"
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
     "Inserta un reproductor de audio usando <audio> con el archivo musica.mp3. "
@@ -919,7 +919,7 @@ class actividad9:
     "Escribe un texto explicativo con <p> antes de cada elemento multimedia."
 )
         if not api_key1:
-            return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+            return render.actividad9(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
         prompt = (
             "Evalúa el siguiente código HTML proporcionado por un estudiante. "
@@ -949,17 +949,17 @@ class actividad9:
             response.raise_for_status()
             data = response.json()
             feedback = data["choices"][0]["message"]["content"]
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad9(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
-            return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+            return render.actividad9(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 start_activate = False
 
 # ───────────── Estado global mínimo ─────────────
 start_activate = False  # bandera simple de arranque
 TRAINER_QUESTIONS = [
     # HTML – Estructura, Semántica y Contenido
-    "¿Tu documento comienza con <!DOCTYPE html> y contiene <html>, <head> y <body> correctamente estructurados?",
+    "¿Tu documento comienza con &lt;<!DOCTYPE html>&gt; y contiene &lt;<html>&gt;, <head> y <body> correctamente estructurados?",
     "¿Declaraste el idioma del sitio con <html lang=\"es\">?",
     "¿Utilizarás etiquetas semánticas como <header>, <footer>, <section>, <article> para mejorar accesibilidad y SEO?",
     "¿El <head> incluye <title>, <meta charset=\"UTF-8\">, y <meta name=\"viewport\"> para diseño responsive?",
@@ -1021,16 +1021,20 @@ class ApiChat:
 
         global session
         state = _ensure_state(session)
-
+        
         # ───── Comando CLEAR ─────
         if msg.lower() == "/clear":
             state["activo"] = False
             state["paso"] = 0
             state["historial"] = []
-            return json.dumps({"respuesta": "🗑️ Chat reiniciado."})
+            return json.dumps({
+                "respuesta": "🗑️ Chat reiniciado.",
+                "limpiar": True
+            })
 
-        # ───── Comando START ─────
-        if msg.lower() == "/start":
+
+        # ───── Comando help ─────
+        if msg.lower() == "/help":
             return json.dumps({"respuesta": """
 <h3>📘 Bienvenido al Prompt Trainer</h3>
 <p>Este asistente educativo te ayudará a diseñar un prompt maestro para generar una interfaz web con HTML, CSS y Flask.</p>
@@ -1052,6 +1056,7 @@ class ApiChat:
                 "Eres un asistente educativo experto en desarrollo web. "
                 "Para cada pregunta del cuestionario, primero da una definición extensa (~120 palabras) "
                 "explicando el concepto: qué es, para qué sirve, por qué es importante, y un mini-ejemplo de código si aplica. "
+                "Si das un ejemplo de código, encierra cada línea entre &lt; y &gt; para evitar que se renderice como HTML en el navegador. "
                 "Después formula la pregunta al usuario."
             )
             user = f"Pregunta: {q}"

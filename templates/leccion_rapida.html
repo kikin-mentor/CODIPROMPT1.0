@@ -114,7 +114,7 @@ $def with ()
 
     <div class="chat-messages" id="chat-messages">
       <div class="message bot-message">
-        Hola, ¿en qué puedo ayudarte hoy? Puedes escribir <code>/start</code> para comenzar el entrenamiento de prompts.
+        Hola, ¿en qué puedo ayudarte hoy? Puedes escribir <code>/quiz</code> para comenzar el entrenamiento de prompts.
       </div>
     </div>
 
@@ -154,6 +154,7 @@ $def with ()
       .then(data => {
           if (data.limpiar) {
             document.getElementById('chat-messages').innerHTML = '';
+            addMessage(data.respuesta, 'bot');  // para mostrar el mensaje
             return;
           }
           addMessage(data.respuesta, 'bot');
