@@ -881,146 +881,166 @@ class actividad9:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 start_activate = False
 
+if not hasattr(web.config, "_session"):
+    # Crea la sesión sólo si no existe
+    session = web.session.Session(web.application((), {}), web.session.DiskStore('sessions'), initializer={})
+    web.config._session = session
+else:
+    session = web.config._session
+
+# ───────────── Estado global mínimo ─────────────
+start_activate = False  # bandera simple de arranque
+TRAINER_QUESTIONS = [
+    # HTML – Estructura, Semántica y Contenido
+    "¿Tu documento comienza con <!DOCTYPE html> y contiene <html>, <head> y <body> correctamente estructurados?",
+    "¿Declaraste el idioma del sitio con <html lang=\"es\">?",
+    "¿Utilizarás etiquetas semánticas como <header>, <footer>, <section>, <article> para mejorar accesibilidad y SEO?",
+    "¿El <head> incluye <title>, <meta charset=\"UTF-8\">, y <meta name=\"viewport\"> para diseño responsive?",
+    "¿Necesitas favicon, keywords o descripción (<meta name=\"description\">)?",
+    "¿Usarás encabezados <h1> a <h6> y contenido textual con <p>, <strong>, <em>?",
+    "¿Insertarás imágenes con <img src=\"...\" alt=\"...\"> o contenido multimedia como audio/video con etiquetas HTML5?",
+    "¿Tendrás navegación con <nav> y enlaces <a href=\"...\"> internos/externos (target=\"_blank\")?",
+    "¿Mostrarás listas <ul>/<ol> o tablas <table> para estructurar datos?",
+    # CSS – Diseño y Responsividad
+    "¿Vas a enlazar un archivo CSS externo (<link rel=\"stylesheet\">) o escribir estilos inline?",
+    "¿Usarás layout con Flexbox, Grid o columnas flotantes?",
+    "¿Tu sitio será responsive? ¿Incluirás media queries para adaptarlo a distintos dispositivos?",
+    "¿Implementarás modo oscuro o selector de temas con clases o lógica JS?",
+    # Python + Flask – Backend y Templates
+    "¿Usarás Flask para definir rutas como /inicio, /usuarios, /productos?",
+    "¿Los templates HTML tendrán variables Jinja2 como {{ nombre }} para mostrar datos del backend?",
+    "¿Qué datos manejará el servidor? (usuarios, productos, respuestas, formularios…)",
+    "¿Se requiere una base de datos como SQLite?",
+    "¿Tu aplicación tendrá autenticación de usuarios, manejo de sesiones o control de acceso por roles?",
+    # Accesibilidad
+    "¿La interfaz será accesible para navegación por teclado y lectores de pantalla (ARIA, roles)?"
+]
+
+def _ensure_state(sess):
+    if not hasattr(sess, "trainer") or not isinstance(sess.trainer, dict):
+        sess.trainer = {}
+    sess.trainer.setdefault("activo", False)
+    sess.trainer.setdefault("paso", 0)
+    sess.trainer.setdefault("historial", [])
+    return sess.trainer
+
+def _historial_to_text(historial):
+    if not historial:
+        return "Sin respuestas previas."
+    return "\n".join(f"{i+1}. P: {qa['q']}\n   R: {qa['a']}" for i, qa in enumerate(historial))
+
+def _groq(modelo, system, user):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("Falta GROQ_API_KEY en variables de entorno.")
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": modelo,
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        "max_tokens": 4000,
+        "temperature": 0.3,
+        "top_p": 1.0
+    }
+    r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                      headers=headers, json=payload, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    return data["choices"][0]["message"]["content"].strip()
+
 class ApiChat:
     def POST(self):
         data = web.input()
-        mensaje_usuario = data.get("mensaje", "").strip()
-        global start_activate 
-        if not mensaje_usuario:
-            return json.dumps({"respuesta": "Por favor, escribe un mensaje o usa /start para comenzar."})
+        msg = (data.get("mensaje") or "").strip()
 
-        # ───────────────────────────── /clear ─────────────────────────────
-        if mensaje_usuario.lower() == "/clear":
-            start_activate = False
-        # Envía una bandera especial para que el frontend sepa que debe limpiar el chat
-            return json.dumps({
-            "respuesta": "",  # No se mostrará ningún mensaje
-            "limpiar": True
-         })
-        # ───────────────────────────── /help ─────────────────────────────
-        if mensaje_usuario.lower() == "/help":
-            guia = """
-📘 Bienvenido al Prompt Trainer de interfaces web
+        global session
+        state = _ensure_state(session)
 
-Este asistente te ayuda a redactar prompts efectivos para generar interfaces completas (HTML + CSS + JS).
+        # ───── Comando CLEAR ─────
+        if msg.lower() == "/clear":
+            state["activo"] = False
+            state["paso"] = 0
+            state["historial"] = []
+            return json.dumps({"respuesta": "🗑️ Chat reiniciado."})
 
-🧠 ¿Cómo funciona?
-1. Escribe /start para ver un ejemplo.
-2. Escribe un prompt claro describiendo la interfaz.
-3. Recibirás una evaluación (1–10) y el código generado.
+        # ───── Comando START ─────
+        if msg.lower() == "/start":
+            return json.dumps({"respuesta": """
+<h3>📘 Bienvenido al Prompt Trainer</h3>
+<p>Este asistente educativo te ayudará a diseñar un prompt maestro para generar una interfaz web con HTML, CSS y Flask.</p>
+<p>Comandos disponibles:</p>
+<ul>
+<li><code>/quiz</code> — Iniciar cuestionario de 19 preguntas</li>
+<li><code>/clear</code> — Borrar todo el chat y reiniciar</li>
+<li><code>/final</code> — Mostrar el prompt maestro (solo si ya terminaste)</li>
+</ul>
+"""})
 
-✅ Ejemplo de prompt efectivo:
-"Una página con encabezado oscuro que diga 'Mi Tienda', un botón azul al centro
-que al hacer clic muestre una alerta JS."
-
-🖥️ Comandos
-/help == da información sobre el chat 
-/start == comienza la lección
-/clear == limpia el chat 
-"""
-            return json.dumps({"respuesta": html.escape(guia)})
-
-        # ───────────────────────────── /start ────────────────────────────
-        if mensaje_usuario.lower() == "/start":
-            start_activate = True
-            ejemplo_html = """
-<!DOCTYPE html>
-<html lang='es'>
-<head>
-  <meta charset='UTF-8'>
-  <style>
-    body{background:#f0f0f0;font-family:sans-serif;margin:0;padding:20px;text-align:center}
-    header{background:#333;color:#fff;padding:10px;font-size:20px}
-    main{margin-top:20px}
-    button{padding:10px 20px;background:#007bff;color:#fff;border:none;border-radius:5px}
-  </style>
-</head>
-<body>
-  <header>Mi Sitio Web</header>
-  <main>
-    <p>Bienvenido a mi página</p>
-    <button>Haz clic aquí</button>
-  </main>
-</body>
-</html>
-"""
-            instrucciones = (
-                "🎯 <strong>Reto Prompt Trainer</strong><br>"
-                "Redacta un prompt que permita generar una interfaz como esta. "
-                "Luego recibirás una calificación (1–10) y el código correspondiente.<br><br>"
+        # ───── Comando QUIZ ─────
+        if msg.lower() == "/quiz":
+            state["activo"] = True
+            state["paso"] = 0
+            state["historial"] = []
+            q = TRAINER_QUESTIONS[0]
+            system = (
+                "Eres un asistente educativo experto en desarrollo web. "
+                "Para cada pregunta del cuestionario, primero da una definición extensa (~120 palabras) "
+                "explicando el concepto: qué es, para qué sirve, por qué es importante, y un mini-ejemplo de código si aplica. "
+                "Después formula la pregunta al usuario."
             )
+            user = f"Pregunta: {q}"
+            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)})
 
-            iframe = (
-                f'<iframe sandbox="allow-scripts allow-same-origin" '
-                f'style="width:100%;max-width:800px;height:400px;'
-                f'border:1px solid #ccc;border-radius:10px;" '
-                f'srcdoc="{(ejemplo_html)}"></iframe>'
+        # ───── Comando FINAL ─────
+        if msg.lower() == "/final":
+            if state["paso"] < len(TRAINER_QUESTIONS):
+                faltan = len(TRAINER_QUESTIONS) - state["paso"]
+                return json.dumps({"respuesta": f"⚠️ Aún faltan {faltan} preguntas por responder antes de generar el prompt final."})
+            hist = _historial_to_text(state["historial"])
+            system = (
+                "Construye un 'prompt maestro' único y completo a partir del historial Q&A. "
+                "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA para generar la interfaz web."
             )
+            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")})
 
-            return json.dumps({"respuesta": instrucciones + iframe})
+        # ───── Si no está en modo quiz ─────
+        if not state["activo"]:
+            return json.dumps({"respuesta": "⚠️ Usa <code>/quiz</code> para comenzar el cuestionario."})
 
-        # ─────────────── Validar si no se ha usado /start ───────────────
-        if not any(cmd in mensaje_usuario.lower() for cmd in ["/start", "/help", "/clear"]) and not start_activate:
-            advertencia = (
-                "⚠️ Para iniciar, por favor ingresa el comando <strong>/start</strong> o usa <strong>/help</strong> para obtener más información."
+        # ───── Respuesta dentro del quiz ─────
+        paso = state["paso"]
+
+        # Guardar respuesta del usuario si es a la pregunta actual
+        if not msg.startswith("?") and not msg.endswith("?") and paso < len(TRAINER_QUESTIONS):
+            state["historial"].append({"q": TRAINER_QUESTIONS[paso], "a": msg})
+            paso += 1
+            state["paso"] = paso
+
+        # Si ya terminó → generar prompt final
+        if paso >= len(TRAINER_QUESTIONS):
+            hist = _historial_to_text(state["historial"])
+            system = (
+                "Construye un 'prompt maestro' único y completo a partir del historial Q&A. "
+                "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA para generar la interfaz web."
             )
-            return json.dumps({"respuesta": advertencia})
+            state["activo"] = False
+            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")})
 
-        # ─────────────── Evaluación del prompt + generación de código ───────────────
-        try:
-            api_key = os.getenv("GROQ_API_KEY")
-            modelo  = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+        # Si es una pregunta libre → responder y repetir pregunta actual
+        if msg.startswith("?") or msg.endswith("?"):
+            system = "Eres un experto en desarrollo web. Responde de forma clara, concisa y didáctica."
+            respuesta = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
+            return json.dumps({"respuesta": f"{respuesta}<br><br>Ahora retomemos: {TRAINER_QUESTIONS[paso]}"})
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-
-            prompt_sistema = (
-                "Eres un experto en prompt engineering aplicado al desarrollo web. "
-                "Primero evalúa el prompt del usuario con base en claridad, precisión y estructura. "
-                "Otorga una calificación del 1 al 10 y explica brevemente por qué.\n\n"
-                "Después genera un documento HTML5 completo que cumpla la solicitud.\n\n"
-                "✅ Formato EXACTO:\n"
-                "1. 📝 Evaluación del prompt:\n"
-                "Puntaje: X/10\n"
-                "Comentario: ...\n\n"
-                "2. 🧾 Código generado:\n"
-                "(bloque completo desde <!DOCTYPE html> hasta </html>)"
-                "3. recomendaciones:\n"
-            )
-
-            payload = {
-                "model": modelo,
-                "messages": [
-                    {"role": "system", "content": prompt_sistema},
-                    {"role": "user",   "content": mensaje_usuario}
-                ],
-                "max_tokens": 4096,
-                "temperature": 0.4,
-                "top_p": 1.0
-            }
-
-            resp = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers=headers, json=payload, timeout=30
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            respuesta = data["choices"][0]["message"]["content"].strip()
-
-            if data["choices"][0].get("finish_reason") == "length":
-                respuesta += (
-                    "\n\n⚠️ La respuesta fue truncada. Intenta dividir tu prompt "
-                    "o aumentar max_tokens."
-                )
-
-            return json.dumps({"respuesta": html.escape(respuesta)})
-
-        except Exception as e:
-            return json.dumps({"respuesta": f"Error al procesar la solicitud: {e}"})
-
-
+        # Enviar siguiente pregunta
+        q = TRAINER_QUESTIONS[paso]
+        system = (
+            "Eres un asistente educativo experto en desarrollo web. "
+            "Para cada pregunta, primero da una definición extensa (~120 palabras) "
+            "explicando el concepto: qué es, para qué sirve, por qué es importante, y un mini-ejemplo de código si aplica. "
+            "Después formula la pregunta al usuario."
+        )
+        user = f"Pregunta: {q}"
+        return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)})
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
