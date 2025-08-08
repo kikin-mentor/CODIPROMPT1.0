@@ -6,6 +6,7 @@ import requests
 import json
 from dotenv import load_dotenv  
 import html
+
 #import time
 #from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 #import plotly.graph_objs as go
@@ -1014,6 +1015,41 @@ def _groq(modelo, system, user):
     data = r.json()
     return data["choices"][0]["message"]["content"].strip()
 
+import html
+import re
+import json
+import os
+
+def render_safe_markdownish(md_text: str) -> str:
+    """Escapa todo, pero respeta bloques de código con o sin backticks."""
+    blocks = []
+
+    # 1) Detectar bloques con triple backticks
+    def _block_repl(m):
+        lang = (m.group(1) or "").strip()
+        code = m.group(2)
+        blocks.append(f'<pre><code class="lang-{html.escape(lang)}">{html.escape(code)}</code></pre>')
+        return f"@@BLOCK{len(blocks)-1}@@"
+
+    text = re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=re.DOTALL)
+
+    # 2) Detectar HTML aunque no tenga backticks
+    html_match = re.search(r"<!DOCTYPE html>.*</html>", md_text, flags=re.DOTALL | re.IGNORECASE)
+    if html_match:
+        code = html_match.group(0)
+        blocks.append(f'<pre><code class="lang-html">{html.escape(code)}</code></pre>')
+        text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
+
+    # 3) Escapar el resto del texto
+    text = html.escape(text)
+
+    # 4) Restaurar bloques de código
+    for i, block_html in enumerate(blocks):
+        text = text.replace(f"@@BLOCK{i}@@", block_html)
+
+    return text
+
+
 class ApiChat:
     def POST(self):
         data = web.input()
@@ -1021,7 +1057,10 @@ class ApiChat:
 
         global session
         state = _ensure_state(session)
-        
+
+        def safe_json(respuesta_raw: str):
+            return json.dumps({"respuesta": render_safe_markdownish(respuesta_raw)})
+
         # ───── Comando CLEAR ─────
         if msg.lower() == "/clear":
             state["activo"] = False
@@ -1032,19 +1071,17 @@ class ApiChat:
                 "limpiar": True
             })
 
-
-        # ───── Comando help ─────
+        # ───── Comando HELP ─────
         if msg.lower() == "/help":
-            return json.dumps({"respuesta": """
-<h3>📘 Bienvenido al Prompt Trainer</h3>
-<p>Este asistente educativo te ayudará a diseñar un prompt maestro para generar una interfaz web con HTML, CSS y Flask.</p>
-<p>Comandos disponibles:</p>
-<ul>
-<li><code>/quiz</code> — Iniciar cuestionario de 19 preguntas</li>
-<li><code>/clear</code> — Borrar todo el chat y reiniciar</li>
-<li><code>/final</code> — Mostrar el prompt maestro (solo si ya terminaste)</li>
-</ul>
-"""})
+            return safe_json(
+"""📘 Bienvenido al Prompt Trainer
+Este asistente educativo te ayudará a diseñar un prompt maestro para generar una interfaz web con HTML, CSS y Flask.
+
+Comandos disponibles:
+`/quiz` — Iniciar cuestionario de 19 preguntas  
+`/clear` — Borrar todo el chat y reiniciar  
+`/final` — Mostrar el prompt maestro (solo si ya terminaste)"""
+            )
 
         # ───── Comando QUIZ ─────
         if msg.lower() == "/quiz":
@@ -1053,66 +1090,71 @@ class ApiChat:
             state["historial"] = []
             q = TRAINER_QUESTIONS[0]
             system = (
-                "Eres un asistente educativo experto en desarrollo web. "
-                "Para cada pregunta del cuestionario, primero da una definición extensa (~120 palabras) "
-                "explicando el concepto: qué es, para qué sirve, por qué es importante, y un mini-ejemplo de código si aplica. "
-                "Si das un ejemplo de código, encierra cada línea entre &lt; y &gt; para evitar que se renderice como HTML en el navegador. "
+                "Eres un asistente educativo experto en desarrollo web (Python y HTML). "
+                "Para cada pregunta del cuestionario, primero da una definición extensa (~120 palabras). "
+                "Incluye SIEMPRE un mini-ejemplo dentro de un bloque de código usando triple backticks "
+                "con el lenguaje correcto, por ejemplo:\n"
+                "```html\n<!DOCTYPE html>\n<html>\n<head>...</head>\n<body>...</body>\n</html>\n```\n"
+                "No uses solo texto ni &lt; y &gt;, usa siempre este formato. "
                 "Después formula la pregunta al usuario."
             )
             user = f"Pregunta: {q}"
-            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)})
+            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
+            return safe_json(respuesta_raw)
 
         # ───── Comando FINAL ─────
         if msg.lower() == "/final":
             if state["paso"] < len(TRAINER_QUESTIONS):
                 faltan = len(TRAINER_QUESTIONS) - state["paso"]
-                return json.dumps({"respuesta": f"⚠️ Aún faltan {faltan} preguntas por responder antes de generar el prompt final."})
+                return safe_json(f"⚠️ Aún faltan {faltan} preguntas por responder antes de generar el prompt final.")
             hist = _historial_to_text(state["historial"])
             system = (
                 "Construye un 'prompt maestro' único y completo a partir del historial Q&A. "
-                "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA para generar la interfaz web."
+                "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA."
             )
-            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")})
+            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")
+            return safe_json(respuesta_raw)
 
         # ───── Si no está en modo quiz ─────
         if not state["activo"]:
-            return json.dumps({"respuesta": "⚠️ Usa <code>/quiz</code> para comenzar el cuestionario."})
+            return safe_json("⚠️ Usa `/quiz` para comenzar el cuestionario.")
 
         # ───── Respuesta dentro del quiz ─────
         paso = state["paso"]
 
-        # Guardar respuesta del usuario si es a la pregunta actual
         if not msg.startswith("?") and not msg.endswith("?") and paso < len(TRAINER_QUESTIONS):
             state["historial"].append({"q": TRAINER_QUESTIONS[paso], "a": msg})
             paso += 1
             state["paso"] = paso
 
-        # Si ya terminó → generar prompt final
         if paso >= len(TRAINER_QUESTIONS):
             hist = _historial_to_text(state["historial"])
             system = (
                 "Construye un 'prompt maestro' único y completo a partir del historial Q&A. "
-                "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA para generar la interfaz web."
+                "Debe ser específico e incluir todos los detalles mencionados."
             )
             state["activo"] = False
-            return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")})
+            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")
+            return safe_json(respuesta_raw)
 
-        # Si es una pregunta libre → responder y repetir pregunta actual
         if msg.startswith("?") or msg.endswith("?"):
             system = "Eres un experto en desarrollo web. Responde de forma clara, concisa y didáctica."
-            respuesta = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
-            return json.dumps({"respuesta": f"{respuesta}<br><br>Ahora retomemos: {TRAINER_QUESTIONS[paso]}"})
+            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
+            return safe_json(f"{respuesta_raw}\n\nAhora retomemos: {TRAINER_QUESTIONS[paso]}")
 
         # Enviar siguiente pregunta
         q = TRAINER_QUESTIONS[paso]
         system = (
             "Eres un asistente educativo experto en desarrollo web. "
-            "Para cada pregunta, primero da una definición extensa (~120 palabras) "
-            "explicando el concepto: qué es, para qué sirve, por qué es importante, y un mini-ejemplo de código si aplica. "
+            "Primero da una definición extensa (~120 palabras). "
+            "Incluye SIEMPRE un mini-ejemplo dentro de triple backticks (```html ... ```) "
+            "para que pueda mostrarse formateado. "
             "Después formula la pregunta al usuario."
         )
         user = f"Pregunta: {q}"
-        return json.dumps({"respuesta": _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)})
+        respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
+        return safe_json(respuesta_raw)
+
 
 # ─────────────────────── Lanzador de la aplicación ────────────────────────
 if __name__ == "__main__":
