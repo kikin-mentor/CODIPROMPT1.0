@@ -13,6 +13,7 @@ CREATE TABLE usuarios (
     password TEXT NOT NULL,
     fecha_de_registro DATE DEFAULT CURRENT_DATE,
     imagen TEXT
+    rol TEXT
 );
 
 CREATE TABLE lecciones (
@@ -113,7 +114,10 @@ CREATE TABLE prompt (
     FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion)
 );
 
-
+CREATE TABLE rol (
+    id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
+    rol TEXT NOT NULL
+);
 
 
 
@@ -211,6 +215,10 @@ INSERT INTO lecciones (titulo, contenido_html, explicacion) VALUES
 
 
 
+
+INSERT INTO rol (id_rol, rol) VALUES
+(1, 'Alumno'),
+(2, 'Administrativo');
 
 
 
