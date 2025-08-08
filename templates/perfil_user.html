@@ -217,12 +217,13 @@ $def with (usuario)
             </select>
         </div>
 
-        <form method="post">
-        <div class="buttons">
-            <button class="btn btn-delete" name="borrar_cuenta" type="submit">Borrar Cuenta</button>
-            <button class="btn btn-change" name="cerrar_sesion" type="submit">Cerrar Sesión</button>
-        </div>
+        <form action="/logout" method="post">
+            <div class="buttons">
+                <button class="btn btn-delete" name="borrar_cuenta" formaction="/perfil_user" formmethod="post">Borrar Cuenta</button>
+                <button class="btn btn-change" type="submit">Cerrar Sesión</button>
+            </div>
         </form>
+
         <div class="buttons"> 
         <button class="btn btn-change" formaction="/cambiar_contraseña" formmethod="get">Cambiar Contraseña</button>
         </div>

@@ -11,7 +11,6 @@ import html
 #import plotly.graph_objs as go
 #import plotly.io as pio
 
-
 urls = (
     '/', 'Index',
     '/registro', 'Registro',
@@ -44,6 +43,7 @@ urls = (
     '/iniciar_secion_admin','IniciarSecionAdmin',
     '/info','Info',
     '/datos','Datos',
+    '/logout', 'Logout',
 )
 render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
@@ -141,7 +141,7 @@ class Registro:
         usuario = form.get('usuario', '').strip()
         plantel = form.get('plantel', '').strip()
         matricula = form.get('matricula', '').strip()
-
+        
         try:
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
@@ -160,6 +160,7 @@ class Registro:
             return render.registro(error=f"Error al registrar: {e}")
         except Exception as e:
             return render.registro(error=f"Error al registrar: {e}")
+        
 
 
 class InicioSesion:
@@ -179,6 +180,7 @@ class InicioSesion:
             return render.inicio_sesion(error="Ingresa un correo válido")
 
         try:
+            # 📌 Validar usuario en usuarios.db
             con = sqlite3.connect("usuarios.db")
             cur = con.cursor()
             cur.execute("SELECT id_usuario, usuario, password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
@@ -189,12 +191,80 @@ class InicioSesion:
                 session.logged_in = True
                 session.usuario_id = row[0]
                 session.username = row[1]
-                print(">>> LOGIN CORRECTO. ID GUARDADO EN SESIÓN:", session.usuario_id)
+
+                # 📌 Insertar registro en tiempo.db (tabla sesiones)
+                try:
+                    con_tiempo = sqlite3.connect("tiempo.db")
+                    cur_tiempo = con_tiempo.cursor()
+                    cur_tiempo.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row[0],))
+                    con_tiempo.commit()
+
+                    # Guardar id_sesion en la sesión de Python para usarlo después
+                    session.id_sesion = cur_tiempo.lastrowid
+                    con_tiempo.close()
+                except Exception as e:
+                    print("⚠️ Error registrando sesión en tiempo.db:", e)
+                # 📌 Registrar inicio en la base tiempo.db
+                    try:
+                        con_t = get_db_tiempo()
+                        cur_t = con_t.cursor()
+                        cur_t.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (session.usuario_id,))
+                        con_t.commit()
+                        session.id_sesion = cur_t.lastrowid
+                        con_t.close()
+                        print(">>> SESIÓN REGISTRADA EN tiempo.db, ID:", session.id_sesion)
+                    except Exception as e:
+                        print("⚠️ Error registrando sesión en tiempo.db:", e)
+                        session.id_sesion = None
+
                 return web.seeother('/info_secion')
             else:
                 return render.inicio_sesion(error="Usuario o contraseña incorrecta")
+
         except Exception as e:
-            return render.inicio_sesion(error="Error al procesar los datos")
+            return render.inicio_sesion(error=f"Error al procesar los datos: {e}")
+
+class Logout:
+    def POST(self):
+        # Debe estar logueado y tener id_sesion
+        if not getattr(session, "logged_in", False) or not getattr(session, "id_sesion", None):
+            session.kill()
+            return web.seeother('/inicio_sesion')
+
+        id_sesion = session.id_sesion
+        id_usuario = session.usuario_id
+
+        try:
+            con_t = get_db_tiempo()
+            cur_t = con_t.cursor()
+
+            # 1) Marcar fin
+            cur_t.execute("UPDATE sesiones SET fin = CURRENT_TIMESTAMP WHERE id_sesion = ?", (id_sesion,))
+
+            # 2) Calcular minutos entre inicio y fin (en SQL, con julianday)
+            cur_t.execute("""
+                SELECT CAST(ROUND((julianday(COALESCE(fin, CURRENT_TIMESTAMP)) - julianday(inicio)) * 1440) AS INTEGER)
+                FROM sesiones
+                WHERE id_sesion = ?
+            """, (id_sesion,))
+            row = cur_t.fetchone()
+            minutos = max(0, int(row[0])) if row and row[0] is not None else 0
+
+            # 3) Insertar en tiempo_de_uso
+            cur_t.execute("""
+                INSERT INTO tiempo_de_uso (id_usuario, id_sesion, minutos)
+                VALUES (?, ?, ?)
+            """, (id_usuario, id_sesion, minutos))
+
+            con_t.commit()
+            con_t.close()
+        except Exception as e:
+            print("❌ Error guardando tiempo de uso:", e)
+
+        # Cerrar sesión de la app
+        session.kill()
+        return web.seeother('/inicio_sesion')
+
 
 class InfoSecion:
     def GET(self):
@@ -215,8 +285,12 @@ def get_db():
         con = sqlite3.connect("usuarios.db")
         con.row_factory = sqlite3.Row
         return con
-class PerfilUser:
-    
+def get_db_tiempo():
+        con = sqlite3.connect("tiempo.db")
+        con.row_factory = sqlite3.Row
+        return con
+
+class PerfilUser: 
     def GET(self):
         print("DEBUG >> session.usuario_id:", session.get('usuario_id'))
         if hasattr(session, 'usuario_id') and session.usuario_id:
@@ -880,13 +954,6 @@ class actividad9:
         except Exception as e:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 start_activate = False
-
-if not hasattr(web.config, "_session"):
-    # Crea la sesión sólo si no existe
-    session = web.session.Session(web.application((), {}), web.session.DiskStore('sessions'), initializer={})
-    web.config._session = session
-else:
-    session = web.config._session
 
 # ───────────── Estado global mínimo ─────────────
 start_activate = False  # bandera simple de arranque
