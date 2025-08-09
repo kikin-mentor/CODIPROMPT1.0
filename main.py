@@ -4,13 +4,15 @@ import re
 import os
 import requests
 import json
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
 import html
-
 #import time
 #from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 #import plotly.graph_objs as go
 #import plotly.io as pio
+
+# Cargar variables de entorno
+load_dotenv()
 
 urls = (
     '/', 'Index',
@@ -43,18 +45,39 @@ urls = (
     '/api_chat', 'ApiChat',
     '/iniciar_secion_admin','IniciarSecionAdmin',
     '/info','Info',
-    '/datos','Datos',
     '/logout', 'Logout',
 )
+
 render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
-modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # usa este modelo por defecto si no se encuentra la variable
-load_dotenv()  # Cargar variables de entorno desde .env
-# Esto va al inicio del archivo principal
+modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+
 web.config.debug = False
 app = web.application(urls, globals())
 session = web.session.Session(app, web.session.DiskStore("sessions"))
 
+# =============== BD ÚNICA ===============
+DB_PATH = "codiprompt.db"
+
+def get_db():
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    return con
+
+def obtener_id_tiempo(id_usuario):
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("""
+        SELECT id_time FROM tiempo_de_uso
+        WHERE id_usuario=?
+        ORDER BY id_time DESC
+        LIMIT 1
+    """, (id_usuario,))
+    row = cur.fetchone()
+    con.close()
+    return row[0] if row else 0
+
+# =============== VISTAS ===============
 class Index:
     def GET(self):
         return render.index()
@@ -62,6 +85,7 @@ class Index:
 class Registro:
     def GET(self):
         return render.registro()
+
     def POST(self):
         form = web.input()
         campos = [
@@ -94,10 +118,13 @@ class Registro:
         matricula = form.get('matricula', '').strip()
 
         try:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db()
             cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            # Tabla: usuarios
+            cur.execute("""
+                INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
             return render.inicio_sesion()
@@ -111,58 +138,6 @@ class Registro:
             return render.registro(error=f"Error al registrar: {e}")
         except Exception as e:
             return render.registro(error=f"Error al registrar: {e}")
-
-    def POST(self):
-        form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
-            form.get('apellidos', '').strip(),
-            form.get('usuario', '').strip(),
-            form.get('plantel', '').strip(),
-            form.get('matricula', '').strip(),
-            form.get('correo', '').strip(),
-            form.get('password', '').strip(),
-            form.get('confirmar', '').strip()
-        ]
-        if any(not campo for campo in campos):
-            return render.registro(error="llena los campos para continuar")
-
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
-            return render.registro(error="Ingresa un correo válido")
-
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
-        if password != confirmar:
-            return render.registro(error="Las contraseñas no coinciden")
-
-        nombre = form.get('nombre', '').strip()
-        apellidos = form.get('apellidos', '').strip()
-        usuario = form.get('usuario', '').strip()
-        plantel = form.get('plantel', '').strip()
-        matricula = form.get('matricula', '').strip()
-        
-        try:
-            con = sqlite3.connect("usuarios.db")
-            cur = con.cursor()
-            cur.execute("INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (nombre, apellidos, usuario, plantel, matricula, correo, password))
-            con.commit()
-            con.close()
-            return render.inicio_sesion()
-        except sqlite3.IntegrityError as e:
-            if 'usuario' in str(e):
-                return render.registro(error="El nombre de usuario ya existe")
-            if 'correo' in str(e):
-                return render.registro(error="El correo ya está registrado")
-            if 'matricula' in str(e):
-                return render.registro(error="La matrícula ya está registrada")
-            return render.registro(error=f"Error al registrar: {e}")
-        except Exception as e:
-            return render.registro(error=f"Error al registrar: {e}")
-        
-
 
 class InicioSesion:
     def GET(self):
@@ -170,8 +145,8 @@ class InicioSesion:
 
     def POST(self):
         form = web.input()
-        usuario = form.usuario.strip()
-        password = form.password.strip()
+        usuario = (form.usuario or "").strip()
+        password = (form.password or "").strip()
 
         if not usuario or not password:
             return render.inicio_sesion(error="Llena los campos para continuar")
@@ -181,45 +156,34 @@ class InicioSesion:
             return render.inicio_sesion(error="Ingresa un correo válido")
 
         try:
-            # 📌 Validar usuario en usuarios.db
-            con = sqlite3.connect("usuarios.db")
+            con = get_db()
             cur = con.cursor()
-            cur.execute("SELECT id_usuario, usuario, password FROM usuarios WHERE usuario=? OR correo=?", (usuario, usuario))
+            # Tabla: usuarios
+            cur.execute("""
+                SELECT id_usuario, usuario, password
+                FROM usuarios
+                WHERE usuario=? OR correo=?
+            """, (usuario, usuario))
             row = cur.fetchone()
-            con.close()
 
-            if row and row[2] == password:
+            if row and row["password"] == password:
                 session.logged_in = True
-                session.usuario_id = row[0]
-                session.username = row[1]
+                session.usuario_id = row["id_usuario"]
+                session.username = row["usuario"]
 
-                # 📌 Insertar registro en tiempo.db (tabla sesiones)
+                # Tabla: sesiones (registro de inicio)
                 try:
-                    con_tiempo = sqlite3.connect("tiempo.db")
-                    cur_tiempo = con_tiempo.cursor()
-                    cur_tiempo.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row[0],))
-                    con_tiempo.commit()
-
-                    # Guardar id_sesion en la sesión de Python para usarlo después
-                    session.id_sesion = cur_tiempo.lastrowid
-                    con_tiempo.close()
+                    cur.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row["id_usuario"],))
+                    con.commit()
+                    session.id_sesion = cur.lastrowid
                 except Exception as e:
-                    print("⚠️ Error registrando sesión en tiempo.db:", e)
-                # 📌 Registrar inicio en la base tiempo.db
-                    try:
-                        con_t = get_db_tiempo()
-                        cur_t = con_t.cursor()
-                        cur_t.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (session.usuario_id,))
-                        con_t.commit()
-                        session.id_sesion = cur_t.lastrowid
-                        con_t.close()
-                        print(">>> SESIÓN REGISTRADA EN tiempo.db, ID:", session.id_sesion)
-                    except Exception as e:
-                        print("⚠️ Error registrando sesión en tiempo.db:", e)
-                        session.id_sesion = None
+                    print("⚠️ Error registrando sesión:", e)
+                    session.id_sesion = None
 
+                con.close()
                 return web.seeother('/info_secion')
             else:
+                con.close()
                 return render.inicio_sesion(error="Usuario o contraseña incorrecta")
 
         except Exception as e:
@@ -236,36 +200,34 @@ class Logout:
         id_usuario = session.usuario_id
 
         try:
-            con_t = get_db_tiempo()
-            cur_t = con_t.cursor()
+            con = get_db()
+            cur = con.cursor()
 
-            # 1) Marcar fin
-            cur_t.execute("UPDATE sesiones SET fin = CURRENT_TIMESTAMP WHERE id_sesion = ?", (id_sesion,))
+            # Tabla: sesiones -> marcar fin
+            cur.execute("UPDATE sesiones SET fin = CURRENT_TIMESTAMP WHERE id_sesion = ?", (id_sesion,))
 
-            # 2) Calcular minutos entre inicio y fin (en SQL, con julianday)
-            cur_t.execute("""
+            # Calcular minutos en SQL
+            cur.execute("""
                 SELECT CAST(ROUND((julianday(COALESCE(fin, CURRENT_TIMESTAMP)) - julianday(inicio)) * 1440) AS INTEGER)
                 FROM sesiones
                 WHERE id_sesion = ?
             """, (id_sesion,))
-            row = cur_t.fetchone()
+            row = cur.fetchone()
             minutos = max(0, int(row[0])) if row and row[0] is not None else 0
 
-            # 3) Insertar en tiempo_de_uso
-            cur_t.execute("""
+            # Tabla: tiempo_de_uso -> insertar
+            cur.execute("""
                 INSERT INTO tiempo_de_uso (id_usuario, id_sesion, minutos)
                 VALUES (?, ?, ?)
             """, (id_usuario, id_sesion, minutos))
 
-            con_t.commit()
-            con_t.close()
+            con.commit()
+            con.close()
         except Exception as e:
             print("❌ Error guardando tiempo de uso:", e)
 
-        # Cerrar sesión de la app
         session.kill()
         return web.seeother('/inicio_sesion')
-
 
 class InfoSecion:
     def GET(self):
@@ -282,22 +244,15 @@ class IniciarSecionAdmin:
 class LeccionRapida:
     def GET(self):
         return render.leccion_rapida()
-def get_db():
-        con = sqlite3.connect("usuarios.db")
-        con.row_factory = sqlite3.Row
-        return con
-def get_db_tiempo():
-        con = sqlite3.connect("tiempo.db")
-        con.row_factory = sqlite3.Row
-        return con
 
-class PerfilUser: 
+class PerfilUser:
     def GET(self):
-        print("DEBUG >> session.usuario_id:", session.get('usuario_id'))
+        print("DEBUG >> session.usuario_id:", getattr(session, 'usuario_id', None))
         if hasattr(session, 'usuario_id') and session.usuario_id:
             usuario_id = session.usuario_id
             con = get_db()
             cur = con.cursor()
+            # Tabla: usuarios
             cur.execute("SELECT usuario FROM usuarios WHERE id_usuario=?", (usuario_id,))
             row = cur.fetchone()
             con.close()
@@ -320,6 +275,7 @@ class PerfilUser:
                 try:
                     con = get_db()
                     cur = con.cursor()
+                    # Tabla: usuarios
                     cur.execute("UPDATE usuarios SET usuario=? WHERE id_usuario=?", (nuevo_nombre, usuario_id))
                     con.commit()
                     con.close()
@@ -339,6 +295,7 @@ class PerfilUser:
         try:
             con = get_db()
             cur = con.cursor()
+            # Tabla: usuarios
             cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
             row = cur.fetchone()
             if not row:
@@ -346,6 +303,8 @@ class PerfilUser:
                 return render.perfil_user(usuario=form.get('nombre'), error="Usuario o contraseña incorrectos")
 
             id_usuario = row['id_usuario']
+            # Borrar respetando FKs: tiempo_de_uso -> sesiones -> usuarios
+            # Tablas: tiempo_de_uso, sesiones, usuarios
             cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
             cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
             cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
@@ -357,10 +316,7 @@ class PerfilUser:
         except Exception as e:
             return render.perfil_user(usuario=form.get('nombre'), error=f"Error al borrar la cuenta: {e}")
 
-class Datos:
-    def GET (self):
-        return render.datos()
-
+# ====== Lecciones (como estaban) ======
 class Leccion1:
     def GET(self):
         return render.leccion1()
@@ -411,11 +367,11 @@ class cambiarcontraseña:
 
     def POST(self):
         form = web.input()
-        usuario = form.usuario.strip()
-        correo = form.correo.strip()
-        antigua_pass = form.antigua_password.strip()
-        nueva_pass = form.nueva_password.strip()
-        repite_pass = form.repite_password.strip()
+        usuario = (form.usuario or "").strip()
+        correo = (form.correo or "").strip()
+        antigua_pass = (form.antigua_password or "").strip()
+        nueva_pass = (form.nueva_password or "").strip()
+        repite_pass = (form.repite_password or "").strip()
 
         if not usuario or not correo or not antigua_pass or not nueva_pass or not repite_pass:
             return render.cambiar_contraseña(error="Llena todos los campos")
@@ -423,8 +379,9 @@ class cambiarcontraseña:
             return render.cambiar_contraseña(error="Las contraseñas no coinciden")
 
         try:
-            con = sqlite3.connect("usuarios.db")
+            con = get_db()
             cur = con.cursor()
+            # Tabla: usuarios
             cur.execute("SELECT 1 FROM usuarios WHERE usuario=?", (usuario,))
             if not cur.fetchone():
                 con.close()
@@ -445,27 +402,27 @@ class cambiarcontraseña:
         except Exception as e:
             return render.cambiar_contraseña(error=f"Error al cambiar contraseña: {e}")
 
+# ====== Actividades ======
 class actividad1:
     def GET(self):
         return render.actividad1(resultado=None, codigo_enviado="")
 
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
+        codigo = (form.codigo_html or "").strip()
 
         if not codigo:
             return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
-    "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
-    "El documento comienza con <!DOCTYPE html>. Se utiliza <html lang=\"es\">. "
-    "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
-    "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
-)
+            "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
+            "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
+            "El documento comienza con <!DOCTYPE html>. Se utiliza <html lang=\"es\">. "
+            "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
+            "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
+        )
         if not api_key1:
             return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
@@ -474,492 +431,338 @@ class actividad1:
             "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
             "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
         )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
 
         try:
-            response = requests.post(
+            resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key1}"},
                 json=payload,
                 timeout=60
             )
-            response.raise_for_status()
-            data = response.json()
+            resp.raise_for_status()
+            data = resp.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            # Extraer puntaje (0-10)
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            # Si aprueba, registrar en tabla lecciones_completadas (en la MISMA BD)
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db()
+                    cur = con.cursor()
+                    # Tabla: lecciones_completadas
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        session.usuario_id,
+                        1,     # lección 1
+                        1,     # actividad 1
+                        "HTML",
+                        "completada",
+                        1,     # id_lenguaje (ajusta si usas otro catálogo)
+                        obtener_id_tiempo(session.usuario_id)  # FK a tiempo_de_uso si existe un id_time reciente
+                    ))
+                    con.commit()
+                    con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad1(resultado=feedback, codigo_enviado=codigo)
 
         except Exception as e:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
-        
+
+# Las demás actividades no escriben en BD (solo evalúan y renderizan), así que no toco tablas:
 class actividad2:
     def GET(self):
         return render.actividad2(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad2(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Escribe una noticia falsa (puede ser humorística, educativa o creativa). "
-    "Usa <h1> para el título de la noticia, <h2> para subtítulo o resumen, "
-    "<h3> para dividir secciones como 'Introducción', 'Desarrollo' y 'Conclusión'. "
-    "Utiliza <p> en cada sección y dentro de los párrafos incluye <strong> para advertencias, "
-    "<em> para opiniones o sentimientos, y <mark> para resaltar fechas o cifras."
-)
+            "Escribe una noticia falsa (puede ser humorística, educativa o creativa). "
+            "Usa <h1> para el título, <h2> para subtítulo, <h3> para secciones; "
+            "usa <p> con <strong>, <em>, <mark>."
+        )
         if not api_key1:
             return render.actividad2(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type": "application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad2(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad2(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad3:
     def GET(self):
         return render.actividad3(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad3(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
-        
         criterio = (
-            "Inserta una imagen (foto personal o avatar) usando <img> con los atributos alt, width y height. "
-            "Agrega un párrafo de bienvenida. Crea tres enlaces con <a>: "
-            "uno a un sitio externo, uno a una red social en una nueva pestaña (target=\"_blank\"), "
-            "y uno que lleve a otra sección de la misma página usando un id y href=\"#...\"."
+            "Inserta una imagen (<img> con alt, width, height), un párrafo de bienvenida y tres enlaces <a> "
+            "(externo, red social con target=\"_blank\", y ancla interna con id + href=\"#...\")."
         )
         if not api_key1:
             return render.actividad3(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad3(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad3(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad4:
     def GET(self):
         return render.actividad4(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad4(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Crea una lista desordenada (<ul>) con 4 cosas que usarías para acampar. "
-    "Agrega una lista ordenada (<ol>) con pasos para preparar tu platillo favorito. "
-    "Incluye una lista anidada con dos categorías principales: 'Tecnología' y 'Arte', "
-    "y debajo de cada una agrega subelementos."
-)
-
+            "Crea una <ul> con 4 elementos, una <ol> con pasos de un platillo, y una lista anidada con categorías 'Tecnología' y 'Arte'."
+        )
         if not api_key1:
             return render.actividad4(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad4(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad4(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad5:
     def GET(self):
         return render.actividad5(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad5(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Diseña una tabla con los encabezados: Producto, Precio, Cantidad. "
-    "Agrega 3 filas con diferentes productos. Usa <tfoot> para incluir una fila final con el total. "
-    "Utiliza border=\"1\" y aplica colspan o rowspan si deseas fusionar celdas."
-)     
+            "Tabla con <thead>, <tbody>, <tfoot>, con border y al menos 3 filas de productos; usa colspan/rowspan si aplica."
+        )
         if not api_key1:
             return render.actividad5(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad5(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad5(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad6:
     def GET(self):
         return render.actividad6(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad6(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Incluye un formulario <form> con: "
-    "campo de texto para nombre completo (obligatorio, maxlength=\"40\"), "
-    "campo de correo electrónico (type=\"email\"), "
-    "campo de contraseña (type=\"password\", mínimo 6 caracteres), "
-    "comentarios con <textarea> y placeholder, y botón de envío. "
-    "Usa <label> para cada campo y enlázalo con su id."
-)
+            "Formulario con: input texto (required, maxlength=40), email (type=email), password (min 6), textarea con placeholder y botón; usa label for/id."
+        )
         if not api_key1:
             return render.actividad6(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad6(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad6(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad7:
     def GET(self):
         return render.actividad7(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad7(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Dentro del <head>, agrega un bloque <style>. "
-    "Estiliza el fondo del body con un color claro, los títulos (h1, h2) con color azul y alineación centrada, "
-    "los párrafos con una fuente diferente y un tamaño de fuente mayor. "
-    "Aplica márgenes y padding para dar espacio entre los elementos."
-)
-
+            "Agrega <style> en el <head>; body color de fondo claro; h1/h2 azules y centrados; p con fuente diferente y tamaño mayor; usa márgenes y padding."
+        )
         if not api_key1:
             return render.actividad7(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad7(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad7(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad8:
     def GET(self):
         return render.actividad8(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad8(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Escribe una página con: un <header> con el título del sitio, "
-    "una <nav> con una lista de navegación, un <main> con una <section> llamada 'Noticias' y dos <article>. "
-    "Cada <article> debe tener un título y un párrafo. "
-    "Agrega un <footer> con tu nombre y el año actual."
-)
+            "Página con <header>, <nav> (lista), <main> con <section id='Noticias'> y dos <article> (cada uno con título y párrafo); <footer> con nombre y año."
+        )
         if not api_key1:
             return render.actividad8(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad8(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad8(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad9:
     def GET(self):
         return render.actividad9(resultado=None, codigo_enviado="")
-
     def POST(self):
         form = web.input(codigo_html="")
-        codigo = form.codigo_html.strip()
-
+        codigo = (form.codigo_html or "").strip()
         if not codigo:
             return render.actividad9(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
-
-        # Cargar API Key y modelo desde .env
-        api_key1 = "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"
+        api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
-    "Inserta un reproductor de audio usando <audio> con el archivo musica.mp3. "
-    "Agrega un reproductor de video <video> con dimensiones personalizadas. "
-    "Incluye un iframe con un video de YouTube (usa el código de inserción). "
-    "Escribe un texto explicativo con <p> antes de cada elemento multimedia."
-)
+            "Incluye <audio> (musica.mp3), <video> con dimensiones y un <iframe> de YouTube; escribe un <p> explicativo antes de cada uno."
+        )
         if not api_key1:
             return render.actividad9(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
-
-        prompt = (
-            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
-            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
-            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
-        )
-
         payload = {
             "model": modelo,
             "messages": [
-                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio +" No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
+                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
             ],
             "temperature": 0.4
         }
-
         try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key1}"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            data = response.json()
+            r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                              headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
+                              json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
             feedback = data["choices"][0]["message"]["content"]
             return render.actividad9(resultado=feedback, codigo_enviado=codigo)
-
         except Exception as e:
             return render.actividad9(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
-start_activate = False
 
-# ───────────── Estado global mínimo ─────────────
-start_activate = False  # bandera simple de arranque
+# ====== Prompt Trainer (sin cambios de tablas, usa API externa) ======
+start_activate = False
 TRAINER_QUESTIONS = [
-    # HTML – Estructura, Semántica y Contenido
     "¿Tu documento comienza con &lt;<!DOCTYPE html>&gt; y contiene &lt;<html>&gt;, <head> y <body> correctamente estructurados?",
     "¿Declaraste el idioma del sitio con <html lang=\"es\">?",
     "¿Utilizarás etiquetas semánticas como <header>, <footer>, <section>, <article> para mejorar accesibilidad y SEO?",
@@ -969,18 +772,15 @@ TRAINER_QUESTIONS = [
     "¿Insertarás imágenes con <img src=\"...\" alt=\"...\"> o contenido multimedia como audio/video con etiquetas HTML5?",
     "¿Tendrás navegación con <nav> y enlaces <a href=\"...\"> internos/externos (target=\"_blank\")?",
     "¿Mostrarás listas <ul>/<ol> o tablas <table> para estructurar datos?",
-    # CSS – Diseño y Responsividad
     "¿Vas a enlazar un archivo CSS externo (<link rel=\"stylesheet\">) o escribir estilos inline?",
     "¿Usarás layout con Flexbox, Grid o columnas flotantes?",
     "¿Tu sitio será responsive? ¿Incluirás media queries para adaptarlo a distintos dispositivos?",
     "¿Implementarás modo oscuro o selector de temas con clases o lógica JS?",
-    # Python + Flask – Backend y Templates
     "¿Usarás Flask para definir rutas como /inicio, /usuarios, /productos?",
     "¿Los templates HTML tendrán variables Jinja2 como {{ nombre }} para mostrar datos del backend?",
     "¿Qué datos manejará el servidor? (usuarios, productos, respuestas, formularios…)",
     "¿Se requiere una base de datos como SQLite?",
     "¿Tu aplicación tendrá autenticación de usuarios, manejo de sesiones o control de acceso por roles?",
-    # Accesibilidad
     "¿La interfaz será accesible para navegación por teclado y lectores de pantalla (ARIA, roles)?"
 ]
 
@@ -1015,40 +815,23 @@ def _groq(modelo, system, user):
     data = r.json()
     return data["choices"][0]["message"]["content"].strip()
 
-import html
-import re
-import json
-import os
-
 def render_safe_markdownish(md_text: str) -> str:
-    """Escapa todo, pero respeta bloques de código con o sin backticks."""
     blocks = []
-
-    # 1) Detectar bloques con triple backticks
     def _block_repl(m):
         lang = (m.group(1) or "").strip()
         code = m.group(2)
         blocks.append(f'<pre><code class="lang-{html.escape(lang)}">{html.escape(code)}</code></pre>')
         return f"@@BLOCK{len(blocks)-1}@@"
-
     text = re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=re.DOTALL)
-
-    # 2) Detectar HTML aunque no tenga backticks
     html_match = re.search(r"<!DOCTYPE html>.*</html>", md_text, flags=re.DOTALL | re.IGNORECASE)
     if html_match:
         code = html_match.group(0)
         blocks.append(f'<pre><code class="lang-html">{html.escape(code)}</code></pre>')
         text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
-
-    # 3) Escapar el resto del texto
     text = html.escape(text)
-
-    # 4) Restaurar bloques de código
     for i, block_html in enumerate(blocks):
         text = text.replace(f"@@BLOCK{i}@@", block_html)
-
     return text
-
 
 class ApiChat:
     def POST(self):
@@ -1061,17 +844,12 @@ class ApiChat:
         def safe_json(respuesta_raw: str):
             return json.dumps({"respuesta": render_safe_markdownish(respuesta_raw)})
 
-        # ───── Comando CLEAR ─────
         if msg.lower() == "/clear":
             state["activo"] = False
             state["paso"] = 0
             state["historial"] = []
-            return json.dumps({
-                "respuesta": "🗑️ Chat reiniciado.",
-                "limpiar": True
-            })
+            return json.dumps({"respuesta": "🗑️ Chat reiniciado.", "limpiar": True})
 
-        # ───── Comando HELP ─────
         if msg.lower() == "/help":
             return safe_json(
 """📘 Bienvenido al Prompt Trainer
@@ -1083,7 +861,6 @@ Comandos disponibles:
 `/final` — Mostrar el prompt maestro (solo si ya terminaste)"""
             )
 
-        # ───── Comando QUIZ ─────
         if msg.lower() == "/quiz":
             state["activo"] = True
             state["paso"] = 0
@@ -1102,7 +879,6 @@ Comandos disponibles:
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
             return safe_json(respuesta_raw)
 
-        # ───── Comando FINAL ─────
         if msg.lower() == "/final":
             if state["paso"] < len(TRAINER_QUESTIONS):
                 faltan = len(TRAINER_QUESTIONS) - state["paso"]
@@ -1115,11 +891,9 @@ Comandos disponibles:
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")
             return safe_json(respuesta_raw)
 
-        # ───── Si no está en modo quiz ─────
         if not state["activo"]:
             return safe_json("⚠️ Usa `/quiz` para comenzar el cuestionario.")
 
-        # ───── Respuesta dentro del quiz ─────
         paso = state["paso"]
 
         if not msg.startswith("?") and not msg.endswith("?") and paso < len(TRAINER_QUESTIONS):
@@ -1142,7 +916,6 @@ Comandos disponibles:
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
             return safe_json(f"{respuesta_raw}\n\nAhora retomemos: {TRAINER_QUESTIONS[paso]}")
 
-        # Enviar siguiente pregunta
         q = TRAINER_QUESTIONS[paso]
         system = (
             "Eres un asistente educativo experto en desarrollo web. "
@@ -1155,7 +928,6 @@ Comandos disponibles:
         respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
         return safe_json(respuesta_raw)
 
-
-# ─────────────────────── Lanzador de la aplicación ────────────────────────
+# ─────────────────────── Lanzador ────────────────────────
 if __name__ == "__main__":
     app.run()
