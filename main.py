@@ -1100,8 +1100,7 @@ class actividad9:
 
     # ...existing code...
 
-# ====== Prompt Trainer (sin cambios de tablas, usa API externa) ======
-start_activate = False
+# ====== Prompt Trainer (con persistencia) ======
 TRAINER_QUESTIONS = [
     "¿Tu documento comienza con &lt;<!DOCTYPE html>&gt; y contiene &lt;<html>&gt;, <head> y <body> correctamente estructurados?",
     "¿Declaraste el idioma del sitio con <html lang=\"es\">?",
@@ -1124,18 +1123,36 @@ TRAINER_QUESTIONS = [
     "¿La interfaz será accesible para navegación por teclado y lectores de pantalla (ARIA, roles)?"
 ]
 
-def _ensure_state(sess):
-    if not hasattr(sess, "trainer") or not isinstance(sess.trainer, dict):
-        sess.trainer = {}
-    sess.trainer.setdefault("activo", False)
-    sess.trainer.setdefault("paso", 0)
-    sess.trainer.setdefault("historial", [])
-    return sess.trainer
+# ------ Sanitize para mostrar markdown/código de forma segura ------
+def render_safe_markdownish(md_text: str) -> str:
+    import re, html
+    blocks = []
 
-def _historial_to_text(historial):
-    if not historial:
-        return "Sin respuestas previas."
-    return "\n".join(f"{i+1}. P: {qa['q']}\n   R: {qa['a']}" for i, qa in enumerate(historial))
+    # Reemplaza bloques ```lang ... ```
+    def _block_repl(m):
+        lang = (m.group(1) or "").strip()
+        code = m.group(2)
+        blocks.append(f'<pre><code class="lang-{html.escape(lang)}">{html.escape(code)}</code></pre>')
+        return f"@@BLOCK{len(blocks)-1}@@"
+
+    # Captura bloques de código triple backtick
+    text = re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=re.DOTALL)
+
+    # Si detecta un documento HTML completo, lo muestra como bloque
+    html_match = re.search(r"<!DOCTYPE html>.*</html>", md_text, flags=re.DOTALL | re.IGNORECASE)
+    if html_match:
+        code = html_match.group(0)
+        blocks.append(f'<pre><code class="lang-html">{html.escape(code)}</code></pre>')
+        text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
+
+    # Escapa todo el texto restante
+    text = html.escape(text)
+
+    # Restaura los bloques de código ya escapados
+    for i, block_html in enumerate(blocks):
+        text = text.replace(f"@@BLOCK{i}@@", block_html)
+
+    return text
 
 def _groq(modelo, system, user):
     api_key = os.getenv("GROQ_API_KEY")
@@ -1155,24 +1172,86 @@ def _groq(modelo, system, user):
     data = r.json()
     return data["choices"][0]["message"]["content"].strip()
 
-def render_safe_markdownish(md_text: str) -> str:
-    blocks = []
-    def _block_repl(m):
-        lang = (m.group(1) or "").strip()
-        code = m.group(2)
-        blocks.append(f'<pre><code class="lang-{html.escape(lang)}">{html.escape(code)}</code></pre>')
-        return f"@@BLOCK{len(blocks)-1}@@"
-    text = re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=re.DOTALL)
-    html_match = re.search(r"<!DOCTYPE html>.*</html>", md_text, flags=re.DOTALL | re.IGNORECASE)
-    if html_match:
-        code = html_match.group(0)
-        blocks.append(f'<pre><code class="lang-html">{html.escape(code)}</code></pre>')
-        text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
-    text = html.escape(text)
-    for i, block_html in enumerate(blocks):
-        text = text.replace(f"@@BLOCK{i}@@", block_html)
-    return text
+def _ensure_state(sess):
+    if not hasattr(sess, "trainer") or not isinstance(sess.trainer, dict):
+        sess.trainer = {}
+    sess.trainer.setdefault("activo", False)
+    sess.trainer.setdefault("paso", 0)
+    sess.trainer.setdefault("historial", [])
+    # id_ps persistido de la sesión de prompt
+    if not hasattr(sess, "trainer_ps_id"):
+        sess.trainer_ps_id = None
+    return sess.trainer
 
+def _historial_to_text(historial):
+    if not historial:
+        return "Sin respuestas previas."
+    return "\n".join(f"{i+1}. P: {qa['q']}\n   R: {qa['a']}" for i, qa in enumerate(historial))
+
+# ---------- Tablas y helpers de persistencia ----------
+def _init_prompt_tables():
+    con = get_db(); cur = con.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS prompt_sesiones (
+        id_ps              INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario         INTEGER NOT NULL REFERENCES usuarios(id_usuario),
+        prompts_correctos  INTEGER NOT NULL DEFAULT 0,
+        prompt_final       TEXT,
+        fecha_completado   DATETIME
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS prompt_detalle (
+        id_det            INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_ps             INTEGER NOT NULL REFERENCES prompt_sesiones(id_ps),
+        num_pregunta      INTEGER NOT NULL,
+        prompt_ia         TEXT NOT NULL,
+        respuesta_usuario TEXT,
+        created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(id_ps, num_pregunta) ON CONFLICT REPLACE
+    );
+    """)
+    con.commit(); con.close()
+_init_prompt_tables()
+
+def _crear_prompt_sesion(id_usuario: int) -> int:
+    con = get_db(); cur = con.cursor()
+    cur.execute("INSERT INTO prompt_sesiones (id_usuario, prompts_correctos) VALUES (?, 0)", (id_usuario,))
+    con.commit(); ps_id = cur.lastrowid; con.close()
+    return ps_id
+
+def _registrar_prompt_ia(id_ps: int, num_pregunta: int, prompt_ia: str):
+    con = get_db(); cur = con.cursor()
+    cur.execute("""
+        INSERT INTO prompt_detalle (id_ps, num_pregunta, prompt_ia)
+        VALUES (?, ?, ?)
+    """, (id_ps, num_pregunta, prompt_ia))
+    con.commit(); con.close()
+
+def _registrar_respuesta_usuario(id_ps: int, num_pregunta: int, respuesta_usuario: str):
+    con = get_db(); cur = con.cursor()
+    cur.execute("""
+        UPDATE prompt_detalle
+           SET respuesta_usuario = ?
+         WHERE id_ps = ? AND num_pregunta = ?
+    """, (respuesta_usuario, id_ps, num_pregunta))
+    cur.execute("""
+        UPDATE prompt_sesiones
+           SET prompts_correctos = prompts_correctos + 1
+         WHERE id_ps = ?
+    """, (id_ps,))
+    con.commit(); con.close()
+
+def _finalizar_prompt_sesion(id_ps: int, prompt_final: str):
+    con = get_db(); cur = con.cursor()
+    cur.execute("""
+        UPDATE prompt_sesiones
+           SET prompt_final = ?, fecha_completado = CURRENT_TIMESTAMP
+         WHERE id_ps = ?
+    """, (prompt_final, id_ps))
+    con.commit(); con.close()
+
+# ---------- ApiChat ----------
 class ApiChat:
     def POST(self):
         data = web.input()
@@ -1184,10 +1263,12 @@ class ApiChat:
         def safe_json(respuesta_raw: str):
             return json.dumps({"respuesta": render_safe_markdownish(respuesta_raw)})
 
+        # ---- Comandos ----
         if msg.lower() == "/clear":
             state["activo"] = False
             state["paso"] = 0
             state["historial"] = []
+            session.trainer_ps_id = None
             return json.dumps({"respuesta": "🗑️ Chat reiniciado.", "limpiar": True})
 
         if msg.lower() == "/help":
@@ -1201,10 +1282,22 @@ Comandos disponibles:
 `/final` — Mostrar el prompt maestro (solo si ya terminaste)"""
             )
 
+        # ---- Iniciar cuestionario ----
         if msg.lower() == "/quiz":
             state["activo"] = True
             state["paso"] = 0
             state["historial"] = []
+
+            # Crear sesión de prompt para el usuario autenticado
+            id_ps = None
+            if getattr(session, "usuario_id", None):
+                try:
+                    id_ps = _crear_prompt_sesion(session.usuario_id)
+                except Exception as e:
+                    print("⚠️ Error creando prompt_sesion:", e)
+            session.trainer_ps_id = id_ps
+
+            # Generar primera pregunta
             q = TRAINER_QUESTIONS[0]
             system = (
                 "Eres un asistente educativo experto en desarrollo web (Python y HTML). "
@@ -1217,8 +1310,17 @@ Comandos disponibles:
             )
             user = f"Pregunta: {q}"
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
+
+            # Guardar prompt IA #1
+            if session.trainer_ps_id and getattr(session, "usuario_id", None):
+                try:
+                    _registrar_prompt_ia(session.trainer_ps_id, 1, respuesta_raw)
+                except Exception as e:
+                    print("⚠️ Error guardando prompt IA (1):", e)
+
             return safe_json(respuesta_raw)
 
+        # ---- Mostrar prompt final manualmente ----
         if msg.lower() == "/final":
             if state["paso"] < len(TRAINER_QUESTIONS):
                 faltan = len(TRAINER_QUESTIONS) - state["paso"]
@@ -1229,18 +1331,46 @@ Comandos disponibles:
                 "Debe ser específico, incluir todos los detalles mencionados, y estar listo para usarse en otra IA."
             )
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")
+
+            # Marcar sesión completada
+            if session.trainer_ps_id and getattr(session, "usuario_id", None):
+                try:
+                    _finalizar_prompt_sesion(session.trainer_ps_id, respuesta_raw)
+                except Exception as e:
+                    print("⚠️ Error finalizando prompt_sesion (/final):", e)
+
             return safe_json(respuesta_raw)
 
+        # Si no está activo el quiz
         if not state["activo"]:
             return safe_json("⚠️ Usa `/quiz` para comenzar el cuestionario.")
 
         paso = state["paso"]
 
-        if not msg.startswith("?") and not msg.endswith("?") and paso < len(TRAINER_QUESTIONS):
+        # ---- Pregunta del usuario durante el flujo (aclaraciones) ----
+        if msg.startswith("?") or msg.endswith("?"):
+            system = "Eres un experto en desarrollo web. Responde de forma clara, concisa y didáctica."
+            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
+            return safe_json(f"{respuesta_raw}\n\nAhora retomemos: {TRAINER_QUESTIONS[paso]}")
+
+        # ---- Registrar respuesta del usuario a la pregunta actual ----
+        if paso < len(TRAINER_QUESTIONS):
+            # num de pregunta humano (1..19)
+            num_preg = paso + 1
             state["historial"].append({"q": TRAINER_QUESTIONS[paso], "a": msg})
+
+            # Guardar respuesta del usuario
+            if session.trainer_ps_id and getattr(session, "usuario_id", None):
+                try:
+                    _registrar_respuesta_usuario(session.trainer_ps_id, num_preg, msg)
+                except Exception as e:
+                    print("⚠️ Error guardando respuesta usuario:", e)
+
+            # Avanzar
             paso += 1
             state["paso"] = paso
 
+        # ---- Si terminó el cuestionario (19/19) -> generar prompt maestro y finalizar ----
         if paso >= len(TRAINER_QUESTIONS):
             hist = _historial_to_text(state["historial"])
             system = (
@@ -1249,13 +1379,16 @@ Comandos disponibles:
             )
             state["activo"] = False
             respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, f"Historial:\n{hist}")
+
+            if session.trainer_ps_id and getattr(session, "usuario_id", None):
+                try:
+                    _finalizar_prompt_sesion(session.trainer_ps_id, respuesta_raw)
+                except Exception as e:
+                    print("⚠️ Error finalizando prompt_sesion:", e)
+
             return safe_json(respuesta_raw)
 
-        if msg.startswith("?") or msg.endswith("?"):
-            system = "Eres un experto en desarrollo web. Responde de forma clara, concisa y didáctica."
-            respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, msg)
-            return safe_json(f"{respuesta_raw}\n\nAhora retomemos: {TRAINER_QUESTIONS[paso]}")
-
+        # ---- Generar y guardar la siguiente pregunta de la IA ----
         q = TRAINER_QUESTIONS[paso]
         system = (
             "Eres un asistente educativo experto en desarrollo web. "
@@ -1266,6 +1399,14 @@ Comandos disponibles:
         )
         user = f"Pregunta: {q}"
         respuesta_raw = _groq(os.getenv("GROQ_MODEL", "llama3-8b-8192"), system, user)
+
+        if session.trainer_ps_id and getattr(session, "usuario_id", None):
+            try:
+                # paso es 0-based; num_preg = paso+1
+                _registrar_prompt_ia(session.trainer_ps_id, paso + 1, respuesta_raw)
+            except Exception as e:
+                print("⚠️ Error guardando prompt IA (siguiente):", e)
+
         return safe_json(respuesta_raw)
 
 # ─────────────────────── Lanzador ────────────────────────

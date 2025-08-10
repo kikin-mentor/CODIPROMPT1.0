@@ -105,13 +105,11 @@ CREATE TABLE actividades (
 CREATE TABLE prompt (
     id_prompt INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
-    id_leccion INTEGER NOT NULL,
     prompt TEXT NOT NULL,
     respuesta TEXT NOT NULL,
     prompts_correctos INTEGER NOT NULL,
     fecha DATE DEFAULT CURRENT_DATE,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
-    FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion)
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
 CREATE TABLE rol (
