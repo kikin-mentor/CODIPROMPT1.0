@@ -97,7 +97,7 @@ CREATE TABLE actividades (
     titulo TEXT NOT NULL,
     descripcion TEXT NOT NULL,
     contenido TEXT, 
-    respuesta_correcta TEXT, 
+    respuesta_usuario TEXT, 
     puntaje INTEGER NOT NULL,
     FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion)
 );
@@ -236,51 +236,43 @@ INSERT INTO rol (id_rol, rol) VALUES
 
 
 
-INSERT INTO actividades (id_leccion, titulo, descripcion, contenido, respuesta_correcta) VALUES
-(1, "Tu primer documento HTML estructurado",
-"Comprender y aplicar la estructura base de un documento HTML5.",
-"Crear estructura.html con las etiquetas básicas de HTML incluyendo <html>, <head>, <meta>, <title>, <body>, <h1> y <p>.",
-"Archivo HTML válido con título 'Hola, mundo' y párrafo con nombre, edad y afición."),
+INSERT INTO actividad (id_leccion, titulo, descripcion, contenido) VALUES
+(1, 'Tu primer documento HTML estructurado',
+'Comprender y aplicar la estructura base de un documento HTML5.',
+'Crear estructura.html con las etiquetas básicas de HTML incluyendo <html>, <head>, <meta>, <title>, <body>, <h1> y <p>.'),
 
-(2, "Estructura de una noticia",
-"Jerarquizar información y aplicar formato semántico al contenido textual.",
-"Noticia ficticia con encabezados <h1>, <h2>, <h3> y párrafos usando <strong>, <em>, <mark>.",
-"Una página estructurada con texto y etiquetas semánticas correctamente aplicadas."),
+(2, 'Estructura de una noticia',
+'Jerarquizar información y aplicar formato semántico al contenido textual.',
+'Noticia ficticia con encabezados <h1>, <h2>, <h3> y párrafos usando <strong>, <em>, <mark>.'),
 
-(3, "Crea tu tarjeta de presentación digital",
-"Introducir el uso de hipervínculos y elementos gráficos en HTML.",
-"Archivo tarjeta.html con imagen <img>, párrafo de bienvenida y tres enlaces <a>.",
-"Tarjeta personal con imagen, texto y enlaces que funcionan correctamente."),
+(3, 'Crea tu tarjeta de presentación digital',
+'Introducir el uso de hipervínculos y elementos gráficos en HTML.',
+'Archivo tarjeta.html con imagen <img>, párrafo de bienvenida y tres enlaces <a>.'),
 
-(4, "Mi lista organizada",
-"Diferenciar y aplicar listas ordenadas, desordenadas y anidadas.",
-"Archivo listas.html con una <ul>, una <ol>, y una lista anidada bajo categorías 'Tecnología' y 'Arte'.",
-"Una página que muestra claramente los tres tipos de listas aplicados correctamente."),
+(4, 'Mi lista organizada',
+'Diferenciar y aplicar listas ordenadas, desordenadas y anidadas.',
+'Archivo listas.html con una <ul>, una <ol>, y una lista anidada bajo categorías "Tecnología" y "Arte".'),
 
-(5, "Catálogo de productos",
-"Construir tablas con encabezados, celdas y pie de tabla.",
-"Tabla con <thead>, <tbody>, <tfoot>, usando border, y al menos tres filas de productos.",
-"Tabla funcional y visualmente organizada con separación de secciones."),
+(5, 'Catálogo de productos',
+'Construir tablas con encabezados, celdas y pie de tabla.',
+'Tabla con <thead>, <tbody>, <tfoot>, usando border, y al menos tres filas de productos.'),
 
-(6, "Formulario de suscripción",
-"Recoger datos del usuario usando campos accesibles y validados.",
-"Formulario <form> con campos de texto, email, contraseña, <textarea>, y botón de envío.",
-"Formulario que valida los campos requeridos y no permite envío si hay errores."),
+(6, 'Formulario de suscripción',
+'Recoger datos del usuario usando campos accesibles y validados.',
+'Formulario <form> con campos de texto, email, contraseña, <textarea>, y botón de envío.'),
 
-(7, "Dale estilo a tu perfil",
-"Aplicar estilos visuales básicos usando CSS en bloque.",
-"Archivo tarjeta.html con <style> y estilos aplicados a body, encabezados y párrafos.",
-"Una página estilizada con fondo claro, colores y fuentes personalizadas."),
+(7, 'Dale estilo a tu perfil',
+'Aplicar estilos visuales básicos usando CSS en bloque.',
+'Archivo tarjeta.html con <style> y estilos aplicados a body, encabezados y párrafos.'),
 
-(8, "Construye una página informativa",
-"Usar etiquetas semánticas para organizar contenido web.",
-"Archivo semantica.html con <header>, <nav>, <main>, <section>, <article>, <footer>.",
-"Estructura semántica clara que mejora accesibilidad y SEO."),
+(8, 'Construye una página informativa',
+'Usar etiquetas semánticas para organizar contenido web.',
+'Archivo semantica.html con <header>, <nav>, <main>, <section>, <article>, <footer>.'),
 
-(9, "Centro multimedia",
-"Incorporar contenido multimedia en una página web.",
-"Archivo multimedia.html con <audio>, <video> y <iframe> de YouTube, acompañados de texto explicativo.",
-"Página funcional con reproductores visibles y enlaces multimedia correctamente integrados.");
+(9, 'Centro multimedia',
+'Incorporar contenido multimedia en una página web.',
+'Archivo multimedia.html con <audio>, <video> y <iframe> de YouTube, acompañados de texto explicativo.');
+
 
 
 
