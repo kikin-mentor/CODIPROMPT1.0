@@ -77,6 +77,91 @@ def obtener_id_tiempo(id_usuario):
     con.close()
     return row[0] if row else 0
 
+# >>> ADDED: crear tabla de resultados e helper para guardar
+def _init_result_table():
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS respuestas_actividades (
+        id_respuesta       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario         INTEGER NOT NULL REFERENCES usuarios(id_usuario),
+        id_leccion         INTEGER NOT NULL,
+        id_actividad       INTEGER NOT NULL,
+        respuesta_usuario  TEXT NOT NULL,
+        puntaje            INTEGER NOT NULL,
+        feedback           TEXT,
+        created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(id_usuario, id_leccion, id_actividad) ON CONFLICT REPLACE
+    );
+    """)
+    con.commit()
+    con.close()
+
+def guardar_resultado_actividad(id_usuario, id_leccion, id_actividad, respuesta_html, puntaje, feedback):
+    try:
+        con = get_db()
+        cur = con.cursor()
+        cur.execute("""
+            INSERT INTO respuestas_actividades
+            (id_usuario, id_leccion, id_actividad, respuesta_usuario, puntaje, feedback)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (id_usuario, id_leccion, id_actividad, respuesta_html, puntaje, feedback))
+        con.commit()
+        con.close()
+    except Exception as e:
+        print("❌ Error guardando resultado de actividad:", e)
+
+def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None:
+    """
+    Devuelve el id_time de tiempo_de_uso asociado a esta sesión,
+    creando o actualizando el registro con los minutos transcurridos hasta ahora.
+    """
+    try:
+        con = get_db()
+        cur = con.cursor()
+
+        # Verificamos que exista la sesión y calculamos minutos hasta ahora
+        cur.execute("SELECT inicio FROM sesiones WHERE id_sesion=?", (id_sesion,))
+        row = cur.fetchone()
+        if not row:
+            con.close()
+            return None
+
+        # Minutos transcurridos desde 'inicio' hasta ahora (CURRENT_TIMESTAMP)
+        cur.execute("""
+            SELECT CAST(ROUND( (julianday(CURRENT_TIMESTAMP) - julianday(inicio)) * 1440 ) AS INTEGER)
+            FROM sesiones
+            WHERE id_sesion=?
+        """, (id_sesion,))
+        minutos = cur.fetchone()[0] or 0
+        minutos = max(0, int(minutos))
+
+        # ¿Ya existe tiempo_de_uso para esta sesión?
+        cur.execute("SELECT id_time FROM tiempo_de_uso WHERE id_sesion=?", (id_sesion,))
+        trow = cur.fetchone()
+
+        if trow:
+            id_time = trow["id_time"] if isinstance(trow, sqlite3.Row) else trow[0]
+            cur.execute("UPDATE tiempo_de_uso SET minutos=? WHERE id_time=?", (minutos, id_time))
+        else:
+            cur.execute("""
+                INSERT INTO tiempo_de_uso (id_usuario, id_sesion, minutos)
+                VALUES (?, ?, ?)
+            """, (id_usuario, id_sesion, minutos))
+            id_time = cur.lastrowid
+
+        con.commit()
+        con.close()
+        return id_time
+    except Exception as e:
+        print("❌ Error en asegurar_tiempo_en_vivo:", e)
+        return None
+
+
+# llamar al inicializador una vez al cargar
+_init_result_table()
+
+
 # =============== VISTAS ===============
 class Index:
     def GET(self):
@@ -455,12 +540,23 @@ class actividad1:
             m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
             puntaje = int(m.group(1)) if m else 0
 
-            # Si aprueba, registrar en tabla lecciones_completadas (en la MISMA BD)
+            # Guardar respuesta del usuario
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 1, 1, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad1:", e)
+
+            # Si aprueba, registrar en lecciones_completadas con id_time en vivo
             if puntaje >= 7 and getattr(session, "usuario_id", None):
                 try:
                     con = get_db()
                     cur = con.cursor()
-                    # Tabla: lecciones_completadas
+
+                    id_time_actual = None
+                    if getattr(session, "id_sesion", None):
+                        id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion)
+
                     cur.execute("""
                         INSERT INTO lecciones_completadas
                         (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
@@ -471,8 +567,8 @@ class actividad1:
                         1,     # actividad 1
                         "HTML",
                         "completada",
-                        1,     # id_lenguaje (ajusta si usas otro catálogo)
-                        obtener_id_tiempo(session.usuario_id)  # FK a tiempo_de_uso si existe un id_time reciente
+                        1,
+                        id_time_actual
                     ))
                     con.commit()
                     con.close()
@@ -488,11 +584,14 @@ class actividad1:
 class actividad2:
     def GET(self):
         return render.actividad2(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad2(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -502,14 +601,17 @@ class actividad2:
         )
         if not api_key1:
             return render.actividad2(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type": "application/json","Authorization": f"Bearer {api_key1}"},
@@ -517,18 +619,48 @@ class actividad2:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            # Extraer puntaje
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            # Guardar respuesta
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 2, 2, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad2:", e)
+
+            # Registrar lección completada con id_time en vivo
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 2, 2, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad2(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad2(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad3:
     def GET(self):
         return render.actividad3(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad3(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -537,14 +669,17 @@ class actividad3:
         )
         if not api_key1:
             return render.actividad3(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -552,18 +687,44 @@ class actividad3:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 3, 3, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad3:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 3, 3, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad3(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad3(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
-
 class actividad4:
     def GET(self):
         return render.actividad4(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad4(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -571,14 +732,17 @@ class actividad4:
         )
         if not api_key1:
             return render.actividad4(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -586,18 +750,45 @@ class actividad4:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 4, 4, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad4:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 4, 4, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad4(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad4(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad5:
     def GET(self):
         return render.actividad5(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad5(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -605,14 +796,17 @@ class actividad5:
         )
         if not api_key1:
             return render.actividad5(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -620,18 +814,45 @@ class actividad5:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 5, 5, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad5:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 5, 5, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad5(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad5(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad6:
     def GET(self):
         return render.actividad6(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad6(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -639,14 +860,17 @@ class actividad6:
         )
         if not api_key1:
             return render.actividad6(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -654,18 +878,45 @@ class actividad6:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 6, 6, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad6:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 6, 6, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad6(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad6(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad7:
     def GET(self):
         return render.actividad7(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad7(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -673,14 +924,17 @@ class actividad7:
         )
         if not api_key1:
             return render.actividad7(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -688,18 +942,45 @@ class actividad7:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 7, 7, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad7:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 7, 7, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad7(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad7(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad8:
     def GET(self):
         return render.actividad8(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad8(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -707,14 +988,17 @@ class actividad8:
         )
         if not api_key1:
             return render.actividad8(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -722,18 +1006,45 @@ class actividad8:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 8, 8, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad8:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 8, 8, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad8(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad8(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
 class actividad9:
     def GET(self):
         return render.actividad9(resultado=None, codigo_enviado="")
+
     def POST(self):
         form = web.input(codigo_html="")
         codigo = (form.codigo_html or "").strip()
+
         if not codigo:
             return render.actividad9(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
+
         api_key1 = os.getenv("GROQ_API_KEY")
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
         criterio = (
@@ -741,14 +1052,17 @@ class actividad9:
         )
         if not api_key1:
             return render.actividad9(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
+
+        prompt = "Evalúa el siguiente código:\n" + codigo
         payload = {
             "model": modelo,
             "messages": [
                 {"role": "system", "content": "Eres un evaluador experto en programación web. Evalúa exclusivamente el siguiente criterio: " + criterio + " No tomes en cuenta ningún otro aspecto del código. Sé claro, conciso y objetivo en tu retroalimentación."},
-                {"role": "user", "content": "Evalúa el siguiente código:\n" + codigo}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.4
         }
+
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                               headers={"Content-Type":"application/json","Authorization": f"Bearer {api_key1}"},
@@ -756,9 +1070,35 @@ class actividad9:
             r.raise_for_status()
             data = r.json()
             feedback = data["choices"][0]["message"]["content"]
+
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
+            puntaje = int(m.group(1)) if m else 0
+
+            if getattr(session, "usuario_id", None):
+                try:
+                    guardar_resultado_actividad(session.usuario_id, 9, 9, codigo, puntaje, feedback)
+                except Exception as e:
+                    print("⚠️ No se pudo guardar respuesta de actividad9:", e)
+
+            if puntaje >= 7 and getattr(session, "usuario_id", None):
+                try:
+                    con = get_db(); cur = con.cursor()
+                    id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    cur.execute("""
+                        INSERT INTO lecciones_completadas
+                        (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (session.usuario_id, 9, 9, "HTML", "completada", 1, id_time_actual))
+                    con.commit(); con.close()
+                except Exception as e:
+                    print("⚠️ Error insertando lección completada:", e)
+
             return render.actividad9(resultado=feedback, codigo_enviado=codigo)
+
         except Exception as e:
             return render.actividad9(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
+
+    # ...existing code...
 
 # ====== Prompt Trainer (sin cambios de tablas, usa API externa) ======
 start_activate = False
