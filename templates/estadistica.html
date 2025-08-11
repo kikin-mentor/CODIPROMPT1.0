@@ -1,0 +1,173 @@
+$def with (kpi_min, kpi_lec, kpi_pro, bar_data_json, pie_data_json)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Estadísticas de Aprendizaje</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Plotly (cliente) -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+      margin: 0; padding: 24px; line-height: 1.45;
+      background: canvas; color: canvastext;
+    }
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+      background: linear-gradient(135deg, #6C63FF, #00C2FF); color: #fff; font-weight: 700;
+      box-shadow: 0 10px 30px rgba(108,99,255,.25);
+    }
+    h1 { font-size: 22px; margin: 0; }
+    .muted { opacity: .75; font-size: 14px; }
+    .row { display: grid; gap: 16px; }
+    @media (min-width: 900px) { .row { grid-template-columns: 2fr 1fr; } }
+
+    .cards {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin: 12px 0 18px;
+    }
+    .card {
+      padding: 14px 16px; border-radius: 16px;
+      background: color-mix(in srgb, canvas 90%, #6C63FF 4%);
+      border: 1px solid color-mix(in srgb, canvastext 15%, transparent);
+      box-shadow: 0 4px 16px color-mix(in srgb, canvastext 8%, transparent);
+      display: grid; gap: 6px; transition: transform .12s ease;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .kpi { font-size: 26px; font-weight: 800; letter-spacing: .2px; }
+    .kpi-label { font-size: 12px; opacity: .7; display: flex; align-items: center; gap: 8px; }
+    .kpi-label svg { width: 16px; height: 16px; opacity: .8; }
+
+    .panel {
+      padding: 16px; border-radius: 18px;
+      background: color-mix(in srgb, canvas 94%, #00C2FF 3%);
+      border: 1px solid color-mix(in srgb, canvastext 12%, transparent);
+      box-shadow: 0 6px 24px color-mix(in srgb, canvastext 8%, transparent);
+    }
+    .panel h3 { margin: 0 0 8px; font-size: 16px; opacity: .8; }
+
+    .toolbar {
+      display: flex; gap: 8px; align-items: center; justify-content: space-between; margin: 8px 0 16px;
+    }
+    .actions { display: flex; gap: 8px; }
+    button.refresh {
+      border: 0; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 600;
+      background: linear-gradient(135deg, #6C63FF, #00C2FF); color: #fff;
+      box-shadow: 0 8px 20px rgba(108,99,255,.25);
+    }
+    button.refresh:active { transform: translateY(1px); }
+    .status { padding: 8px 10px; border-radius: 10px; font-size: 13px; }
+    .status.ok { background: color-mix(in srgb, #16a34a 25%, transparent); color: color-mix(in srgb, #16a34a 90%, canvastext); }
+    .status.err{ background: color-mix(in srgb, #dc2626 25%, transparent); color: color-mix(in srgb, #dc2626 90%, canvastext); }
+
+    #bar, #pie { width: 100%; height: 360px; }
+    footer { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">CD</div>
+    <div>
+      <h1>Estadísticas</h1>
+      <div class="muted">Tu progreso de uso, lecciones y prompts</div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div id="status" class="status">Cargando…</div>
+    <div class="actions">
+      <button class="refresh" id="btnRefresh">Actualizar</button>
+    </div>
+  </div>
+
+  <section class="cards">
+    <div class="card">
+      <div class="kpi">$kpi_min</div>
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.75A10.25 10.25 0 1 0 22.25 12 10.262 10.262 0 0 0 12 1.75Zm0 18.5A8.25 8.25 0 1 1 20.25 12 8.26 8.26 0 0 1 12 20.25Zm.75-13.5a.75.75 0 0 0-1.5 0V12a.75.75 0 0 0 .33.62l3 2a.75.75 0 0 0 .84-1.24L12.75 11.6Z"/></svg>
+        Minutos totales
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi">$kpi_lec</div>
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2h12A1.5 1.5 0 0 1 20 3.5V20a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 18.5Zm2.5-.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H18V3Z"/></svg>
+        Lecciones completadas
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi">$kpi_pro%</div>
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.3 1.05a1 1 0 0 1 1.4.6l2.5 8a1 1 0 0 1-.8 1.2h-5a1 1 0 0 1-.8-1.6l2.5-3.5H8a1 1 0 0 1-.8-1.6l5-5Z"/></svg>
+        Progreso
+      </div>
+    </div>
+  </section>
+
+  <div class="row">
+    <div class="panel">
+      <h3 id="barTitle"></h3>
+      <div id="bar"></div>
+    </div>
+    <div class="panel">
+      <h3 id="pieTitle"></h3>
+      <div id="pie"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="muted">© 2025 CODIPROMPT. Todos los derechos reservados.</div>
+  </footer>
+
+  <!-- Inyección segura de JSON desde web.py -->
+  <script id="barData" type="application/json">$:bar_data_json</script>
+  <script id="pieData" type="application/json">$:pie_data_json</script>
+
+  <script>
+    const bar_data = JSON.parse(document.getElementById('barData').textContent || '{}');
+    const pie_data = JSON.parse(document.getElementById('pieData').textContent || '{}');
+
+    try {
+      document.getElementById('barTitle').textContent = bar_data.title || 'Tiempo de uso';
+      document.getElementById('pieTitle').textContent = pie_data.title || 'Lecciones vs Prompts';
+
+      Plotly.newPlot('bar', [{
+        x: bar_data.x || [],
+        y: bar_data.y || [],
+        type: 'bar',
+        marker: { color: 'indianred' }
+      }], {
+        title: bar_data.title || '',
+        xaxis: { title: bar_data.x_title || '' },
+        yaxis: { title: bar_data.y_title || '' }
+      });
+
+      Plotly.newPlot('pie', [{
+        labels: pie_data.labels || [],
+        values: pie_data.values || [],
+        type: 'pie',
+        textinfo: 'label+percent',
+        insidetextorientation: 'radial'
+      }], {
+        title: pie_data.title || ''
+      });
+
+      const st = document.getElementById('status');
+      st.textContent = 'OK';
+      st.className = 'status ok';
+    } catch (e) {
+      console.error(e);
+      const st = document.getElementById('status');
+      st.textContent = 'Error';
+      st.className = 'status err';
+    }
+
+    document.getElementById('btnRefresh').addEventListener('click', () => location.reload());
+  </script>
+</body>
+</html>

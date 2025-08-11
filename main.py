@@ -6,10 +6,9 @@ import requests
 import json
 from dotenv import load_dotenv
 import html
-#import time
-#from flask import Flask, render_template, request, redirect, session, url_for, jsonify
-#import plotly.graph_objs as go
-#import plotly.io as pio
+import datetime
+import plotly.graph_objs as go
+import plotly.io as pio
 
 # Cargar variables de entorno
 load_dotenv()
@@ -46,6 +45,7 @@ urls = (
     '/iniciar_secion_admin','IniciarSecionAdmin',
     '/info','Info',
     '/logout', 'Logout',
+    '/estadisticas', 'Estadisticas'
 )
 
 render = web.template.render('templates')
@@ -602,7 +602,11 @@ class actividad2:
         if not api_key1:
             return render.actividad2(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -611,6 +615,7 @@ class actividad2:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -670,7 +675,11 @@ class actividad3:
         if not api_key1:
             return render.actividad3(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -679,6 +688,7 @@ class actividad3:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -733,7 +743,11 @@ class actividad4:
         if not api_key1:
             return render.actividad4(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -742,6 +756,7 @@ class actividad4:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -797,7 +812,11 @@ class actividad5:
         if not api_key1:
             return render.actividad5(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -806,6 +825,7 @@ class actividad5:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -861,7 +881,11 @@ class actividad6:
         if not api_key1:
             return render.actividad6(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -870,6 +894,7 @@ class actividad6:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -925,7 +950,11 @@ class actividad7:
         if not api_key1:
             return render.actividad7(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -934,6 +963,7 @@ class actividad7:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -989,7 +1019,11 @@ class actividad8:
         if not api_key1:
             return render.actividad8(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -998,6 +1032,7 @@ class actividad8:
             ],
             "temperature": 0.4
         }
+
 
         try:
             r = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -1053,7 +1088,11 @@ class actividad9:
         if not api_key1:
             return render.actividad9(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
-        prompt = "Evalúa el siguiente código:\n" + codigo
+        prompt = (
+            "Evalúa el siguiente código HTML proporcionado por un estudiante. "
+            "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
+            "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo
+        )
         payload = {
             "model": modelo,
             "messages": [
@@ -1408,6 +1447,158 @@ Comandos disponibles:
                 print("⚠️ Error guardando prompt IA (siguiente):", e)
 
         return safe_json(respuesta_raw)
+
+def _to_ymd(value):
+    """Convierte a 'YYYY-MM-DD' desde ISO string o epoch int/str; devuelve None si no se puede."""
+    if value is None:
+        return None
+    # epoch como int/float o str numérica
+    try:
+        if isinstance(value, (int, float)) or (isinstance(value, str) and value.isdigit()):
+            ts = int(value)
+            return datetime.datetime.utcfromtimestamp(ts).date().isoformat()
+    except Exception:
+        pass
+    # ISO tipo '2025-08-10 18:09:58' o '2025-08-10'
+    if isinstance(value, str):
+        v = value.strip().replace('T', ' ')
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+            try:
+                return datetime.datetime.strptime(v, fmt).date().isoformat()
+            except Exception:
+                continue
+    return None
+
+def get_db():
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    return con
+
+def _to_ymd(ts: str | None) -> str | None:
+    """Convierte 'YYYY-MM-DD HH:MM:SS' o ISO a 'YYYY-MM-DD'. Devuelve None si no puede."""
+    if not ts:
+        return None
+    try:
+        # Soporta '2025-08-11 13:25:00' o '2025-08-11T13:25:00'
+        ts = ts.replace('T', ' ').split('.')[0]
+        dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        try:
+            # fallback: solo fecha
+            dt = datetime.datetime.strptime(ts[:10], "%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d")
+        except Exception:
+            return None
+
+class Estadisticas:
+    def _build_stats(self, id_usuario: int):
+        con = get_db()
+        cur = con.cursor()
+
+        # 1) Sesiones/minutos
+        cur.execute("""
+            SELECT s.inicio, s.fin, tu.minutos
+            FROM tiempo_de_uso tu
+            JOIN sesiones s ON s.id_sesion = tu.id_sesion
+            WHERE tu.id_usuario = ?
+        """, (id_usuario,))
+        rows = cur.fetchall()
+
+        agreg = {}  # fecha 'YYYY-MM-DD' -> minutos totales
+        for r in rows or []:
+            fin = r['fin'] if isinstance(r['fin'], str) else (r['fin'].decode() if r['fin'] else None)
+            inicio = r['inicio'] if isinstance(r['inicio'], str) else (r['inicio'].decode() if r['inicio'] else None)
+            fecha = _to_ymd(fin) or _to_ymd(inicio)
+            if not fecha:
+                continue
+            minutos = int(r['minutos'] or 0)
+            agreg[fecha] = agreg.get(fecha, 0) + minutos
+
+        dias_semana = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+        fechas_orden = sorted(agreg.keys())
+        x_labels, y_vals = [], []
+        for f in fechas_orden:
+            try:
+                wd = datetime.datetime.strptime(f, '%Y-%m-%d').weekday()
+                x_labels.append(dias_semana[wd])
+            except Exception:
+                x_labels.append(f)
+            y_vals.append(agreg[f])
+
+        # 2) Lecciones completadas
+        cur.execute("SELECT COUNT(*) AS c FROM lecciones_completadas WHERE id_usuario = ?", (id_usuario,))
+        row = cur.fetchone()
+        lecciones = int(row['c']) if row and row['c'] is not None else 0
+
+        # 3) Prompts completados
+        cur.execute("""
+            SELECT COUNT(*) AS c
+            FROM prompt_sesiones
+            WHERE id_usuario = ? AND fecha_completado IS NOT NULL
+        """, (id_usuario,))
+        row = cur.fetchone()
+        prompts = int(row['c']) if row and row['c'] is not None else 0
+
+        con.close()
+
+        return {
+            'ok': True,
+            'bar': {
+                'x': x_labels,
+                'y': y_vals,
+                'title': 'Tiempo de uso',
+                'x_title': 'Día',
+                'y_title': 'Minutos'
+            },
+            'pie': {
+                'labels': ['Lecciones', 'Prompts'],
+                'values': [lecciones, prompts],
+                'title': 'Lecciones vs Prompts'
+            },
+            'totales': {
+                'minutos_totales': sum(y_vals) if y_vals else 0,
+                'lecciones': lecciones,
+                'prompts': prompts
+            }
+        }
+
+    def GET(self):
+        if not getattr(session, "usuario_id", None):
+            return web.seeother('/inicio_sesion')
+
+        data = self._build_stats(session.usuario_id)
+
+        # KPIs
+        kpi_min = data['totales']['minutos_totales']
+        kpi_lec = data['totales']['lecciones']
+        TOTAL_LECCIONES = 9  # ajusta si cambia
+        kpi_pro = int((kpi_lec / TOTAL_LECCIONES) * 100) if TOTAL_LECCIONES else 0
+
+        # Datos de gráficas
+        bar_data = {
+            'x': data['bar']['x'],
+            'y': data['bar']['y'],
+            'title': data['bar']['title'],
+            'x_title': data['bar']['x_title'],
+            'y_title': data['bar']['y_title']
+        }
+        pie_data = {
+            'labels': data['pie']['labels'],
+            'values': data['pie']['values'],
+            'title': data['pie']['title']
+        }
+
+        return render.estadistica(
+            kpi_min=kpi_min,
+            kpi_lec=kpi_lec,
+            kpi_pro=kpi_pro,
+            bar_data_json=json.dumps(bar_data, ensure_ascii=False),
+            pie_data_json=json.dumps(pie_data, ensure_ascii=False)
+        )
+
+    def POST(self):
+        return self.GET()
 
 # ─────────────────────── Lanzador ────────────────────────
 if __name__ == "__main__":

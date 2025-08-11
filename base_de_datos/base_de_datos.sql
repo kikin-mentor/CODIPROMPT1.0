@@ -81,15 +81,15 @@ CREATE TABLE tiempo_leccion (
 CREATE TABLE resumen_diario (
     id_resumen INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
-    fecha DATE DEFAULT CURRENT_DATE,
     id_time INTEGER NOT NULL,
-    promedio_tiempo REAL,
     id_leccion_completada INTEGER NOT NULL,
     id_prompt INTEGER NOT NULL,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
+    FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
     FOREIGN KEY (id_leccion_completada) REFERENCES lecciones_completadas(id_leccion_completada),
     FOREIGN KEY (id_prompt) REFERENCES prompt(id_prompt)
 );
+
 
 CREATE TABLE actividades (
     id_actividad INTEGER PRIMARY KEY AUTOINCREMENT,
