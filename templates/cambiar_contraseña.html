@@ -4,6 +4,7 @@ $def with (error=None)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
     <title>Cambiar contraseña</title>
     <style>
         body {
@@ -77,9 +78,9 @@ $def with (error=None)
     </style>
 </head>
 <body>
-$if error:
-    <div style="color:red; margin-bottom:10px; text-align:center; width:400px;">$error</div>
-<form class="form-container" method="post">
+    $if error:
+        <div style="color:red; margin-bottom:10px; text-align:center; width:400px;">$error</div>
+    <form class="form-container" method="post">
         <label for="usuario">Nombre de usuario</label>
         <input type="text" id="usuario" name="usuario" class="input-estetico" required>
 
@@ -102,3 +103,5 @@ $if error:
         <img src="/static/logo.png" alt="Logo CodiPROMPT" width="600" height="600">
         </a>
     </div>
+</body>
+</html>

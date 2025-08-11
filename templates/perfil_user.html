@@ -55,9 +55,9 @@ $def with (usuario)
             transform: scale(1.05);
         }
         .profile-container {
-            margin-top: 180px;
+            margin-top: 148px;
             margin-left: 35vw;
-            margin-bottom: 68px;
+            margin-bottom: 48px;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
@@ -225,7 +225,7 @@ $def with (usuario)
         </form>
 
         <div class="buttons"> 
-        <button class="btn btn-change" formaction="/cambiar_contraseña" formmethod="get">Cambiar Contraseña</button>
+        <button class="btn btn-change" id="btn-change" formmethod="get">Cambiar Contraseña</button>
         </div>
     
     <script>
@@ -233,13 +233,6 @@ $def with (usuario)
             /*document.querySelector('.btn-change').addEventListener('click', function() {
                 alert('Funcionalidad de cambio de contraseña no implementada.');
             });*/
-
-            // Botón de borrar cuenta
-            document.querySelector('.btn-delete').addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que quieres borrar tu cuenta?')) {
-                    alert('Cuenta borrada.');
-                }
-            });
 
             // Cambio de foto de perfil
             const fileInput = document.getElementById('file-input');
@@ -259,6 +252,10 @@ $def with (usuario)
                     };
                     reader.readAsDataURL(file);
                 }
+            });
+
+            document.getElementById('btn-change').addEventListener('click', () => {
+                window.location.href = '/cambiar_contraseña';
             });
         </script>
     </div>
