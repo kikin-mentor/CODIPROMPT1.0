@@ -1,0 +1,71 @@
+Aqui guardare las consultas necesarias para algunas comprobaciones de base de datos:
+
+1. Mostrar todos los usuarios registrados con su rol 
+            sqlite> SELECT u.id_usuario, u.nombre, u.apellidos, u.usuario, u.id_rol, r.rol
+            FROM usuarios u
+            JOIN rol r ON u.id_rol = r.id_rol;
+
+2. Mostrar cuantas lecciones ha completado cada usuario 
+            SELECT u.usuario, COUNT(lc.id_leccion_completada) AS lecciones_completadas
+            FROM usuarios u
+            LEFT JOIN lecciones_completadas lc ON u.id_usuario = lc.id_usuario
+            GROUP BY u.usuario
+            ORDER BY lecciones_completadas DESC;
+
+3. Mostrar el tiempo total de uso por usuario 
+            SELECT u.usuario, SUM(tu.minutos) AS tiempo_total_minutos
+            FROM usuarios u
+            JOIN tiempo_de_uso tu ON u.id_usuario = tu.id_usuario
+            GROUP BY u.usuario
+            ORDER BY tiempo_total_minutos DESC;
+
+4. Mostrar los prompts generados por ia y la respuesta de usuario
+            SELECT u.usuario, pd.num_pregunta, pd.prompt_ia, pd.respuesta_usuario
+            FROM prompt_detalle pd
+            JOIN prompt_sesiones ps ON pd.id_ps = ps.id_ps
+            JOIN usuarios u ON ps.id_usuario = u.id_usuario
+            ORDER BY u.usuario, pd.num_pregunta;
+
+5. Mostrar los Prompts maestros de la Ia con el usuario al que se le envio
+            SELECT u.usuario, ps.prompt_final
+            FROM prompt_sesiones ps
+            JOIN usuarios u ON ps.id_usuario = u.id_usuario
+            ORDER BY u.usuario;
+
+6. Cuantas sesiones ha iniciado cada usuario 
+            SELECT 
+            u.usuario,
+            COUNT(ps.id_ps) AS total_sesiones
+            FROM prompt_sesiones ps
+            JOIN usuarios u ON ps.id_usuario = u.id_usuario
+            GROUP BY u.usuario
+            ORDER BY total_sesiones DESC;
+
+7. Mostrar la sesion con mas prompts correctos y lecciones completadas
+            SELECT 
+             ps.id_ps AS id_sesion,
+             u.usuario,
+                ps.prompts_correctos,
+                COUNT(lc.id_leccion_completada) AS lecciones_completadas
+            FROM prompt_sesiones ps
+            JOIN usuarios u ON ps.id_usuario = u.id_usuario
+            LEFT JOIN lecciones_completadas lc ON u.id_usuario = lc.id_usuario
+            GROUP BY ps.id_ps, u.usuario, ps.prompts_correctos
+            ORDER BY ps.prompts_correctos DESC
+            LIMIT 3;
+
+8. MOstrar cada actividad con puntaje y el estado de leccion y los puntajes ordenados de mayor a menor
+            SELECT 
+            u.usuario,
+            a.titulo AS actividad,
+            ra.respuesta_usuario,
+            ra.puntaje,
+            lc.estado AS estado_leccion
+            FROM respuestas_actividades ra
+            JOIN usuarios u ON ra.id_usuario = u.id_usuario
+            JOIN actividad a ON ra.id_actividad = a.id_actividad
+            LEFT JOIN lecciones_completadas lc 
+            ON ra.id_usuario = lc.id_usuario AND ra.id_actividad = lc.id_actividad
+            ORDER BY ra.puntaje DESC;
+
+9. 
