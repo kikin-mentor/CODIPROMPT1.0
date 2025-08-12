@@ -205,14 +205,15 @@ class Registro:
         try:
             con = get_db()
             cur = con.cursor()
-            # Tabla: usuarios
             cur.execute("""
                 INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (nombre, apellidos, usuario, plantel, matricula, correo, password))
             con.commit()
             con.close()
-            return render.inicio_sesion()
+            # 🔹 CAMBIO: antes era return render.inicio_sesion()
+            # Ahora redirigimos para que la URL apunte a /inicio_sesion
+            return web.seeother('/inicio_sesion')
         except sqlite3.IntegrityError as e:
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
@@ -223,6 +224,7 @@ class Registro:
             return render.registro(error=f"Error al registrar: {e}")
         except Exception as e:
             return render.registro(error=f"Error al registrar: {e}")
+
 
 class InicioSesion:
     def GET(self):
@@ -243,7 +245,6 @@ class InicioSesion:
         try:
             con = get_db()
             cur = con.cursor()
-            # Tabla: usuarios
             cur.execute("""
                 SELECT id_usuario, usuario, password
                 FROM usuarios
@@ -255,22 +256,19 @@ class InicioSesion:
                 session.logged_in = True
                 session.usuario_id = row["id_usuario"]
                 session.username = row["usuario"]
-
-                # Tabla: sesiones (registro de inicio)
                 try:
                     cur.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row["id_usuario"],))
                     con.commit()
                     session.id_sesion = cur.lastrowid
                 except Exception as e:
-                    print("⚠️ Error registrando sesión:", e)
+                    print("⚠ Error registrando sesión:", e)
                     session.id_sesion = None
-
                 con.close()
+                # 🔹 Aquí es donde se manda al usuario ya logueado
                 return web.seeother('/info_secion')
             else:
                 con.close()
                 return render.inicio_sesion(error="Usuario o contraseña incorrecta")
-
         except Exception as e:
             return render.inicio_sesion(error=f"Error al procesar los datos: {e}")
 

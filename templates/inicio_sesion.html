@@ -16,10 +16,7 @@ $def with (error=None)
             flex-direction: column;
             align-items: center;
         }
-        .logo {
-            display: flex;
-            justify-content: space-between;
-        }
+        .logo { display: flex; justify-content: space-between; }
         .form-container {
             background: #220a2e;
             border-radius: 25px;
@@ -31,83 +28,40 @@ $def with (error=None)
             align-items: center;
         }
         .form-container label {
-            color: #fff;
-            font-weight: 500;
-            margin-bottom: 4px;
-            margin-top: 10px;
-            align-self: flex-start;
+            color: #fff; font-weight: 500; margin-bottom: 4px; margin-top: 10px; align-self: flex-start;
         }
         .form-container input[type="text"],
         .form-container input[type="password"] {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 12px;
-            border: none;
-            margin-bottom: 8px;
-            font-size: 1rem;
-            background: #fff;
-            color: #222;
-            box-sizing: border-box;
+            width: 100%; padding: 8px 12px; border-radius: 12px; border: none; margin-bottom: 8px; font-size: 1rem;
+            background: #fff; color: #222; box-sizing: border-box;
         }
         .form-container input[type="text"]:focus,
-        .form-container input[type="password"]:focus {
-            outline: 2px solid #3a6cf6;
-        }
+        .form-container input[type="password"]:focus { outline: 2px solid #3a6cf6; }
         .form-container .btn-iniciar {
-            width: 100%;
-            background: #2e9d2f;
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            padding: 10px 0;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-top: 10px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
+            width: 100%; background: #2e9d2f; color: #fff; border: none; border-radius: 16px; padding: 10px 0;
+            font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s;
         }
-        .form-container .btn-iniciar:hover {
-            background: #217622;
-        }
+        .form-container .btn-iniciar:hover { background: #217622; }
         .form-container .btn-registrate {
-            width: 100%;
-            background: #2176ff;
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            padding: 10px 0;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 0;
-            cursor: pointer;
-            transition: background 0.2s;
+            width: 100%; background: #2176ff; color: #fff; border: none; border-radius: 16px; padding: 10px 0;
+            font-size: 1.1rem; font-weight: bold; margin-bottom: 0; cursor: pointer; transition: background 0.2s;
         }
-        .form-container .btn-registrate:hover {
-            background: #1856b6;
-        }
+        .form-container .btn-registrate:hover { background: #1856b6; }
         .forgot {
-            margin-top: 32px;
-            background: #220a2e;
-            color: #fff;
-            border-radius: 16px;
-            padding: 16px 0;
-            width: 350px;
-            text-align: center;
-            font-size: 1.05rem;
+            margin-top: 32px; background: #220a2e; color: #fff; border-radius: 16px; padding: 16px 0; width: 350px;
+            text-align: center; font-size: 1.05rem;
         }
-        a {
-            color: #fff;
-            text-decoration: underline;
-        }
+        a { color: #fff; text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="logo">
         <img src="/static/logo.png" alt="Logo CodiPROMPT" width="300" height="300">
     </div>
+
     $if error:
         <div style="color:red; margin-bottom:10px; text-align:center;" class="err">$error</div>
+
     <form class="form-container" method="post">
         <label for="usuario">Correo</label>
         <input type="text" id="usuario" name="usuario" required>
@@ -115,9 +69,11 @@ $def with (error=None)
         <label for="password">Contraseña</label>
         <input type="password" id="password" name="password" required>
 
-        <button type="submit" class="btn-iniciar" href="/info_secion">Iniciar sesión</button>
+        <!-- Envío normal del formulario; el backend redirige a /info_secion al validar -->
+        <button type="submit" class="btn-iniciar">Iniciar sesión</button>
         <button type="button" class="btn-registrate" onclick="window.location.href='/registro'">Registrate</button>
     </form>
+
     <div class="olvidar">
         <a href="/cambiar_contraseña" class="olvi">¿Olvidaste tu Contraseña?</a>
         <a href="/iniciar_secion_admin" class="admin">¿iniciar como administrador?</a>
