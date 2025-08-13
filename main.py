@@ -45,13 +45,15 @@ urls = (
     '/iniciar_secion_admin','IniciarSecionAdmin',
     '/info','Info',
     '/logout', 'Logout',
-    '/estadisticas', 'Estadisticas'
+    '/estadisticas', 'Estadisticas',
+    '/admin','Admin',
+    '/usuario/(\\d+)', 'UsuarioDetalle', 
 )
 
 render = web.template.render('templates')
 api_key = os.getenv("GROQ_API_KEY")
 modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
-
+DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db")
 web.config.debug = False
 app = web.application(urls, globals())
 session = web.session.Session(app, web.session.DiskStore("sessions"))
@@ -316,13 +318,81 @@ class InfoSecion:
     def GET(self):
         return render.info_secion()
 
+class Admin:
+    def GET(self):
+        if not getattr(session, "logged_in", False):
+            return web.seeother('/iniciar_secion_admin')
+
+        try:
+            con = get_db()
+            cur = con.cursor()
+            cur.execute("""
+                SELECT id_usuario, nombre, apellidos, usuario, correo, plantel, fecha_de_registro
+                FROM usuarios
+                WHERE id_rol IN (1, '1')              
+                ORDER BY fecha_de_registro DESC
+            """)
+            rows = cur.fetchall()
+            con.close()
+        except Exception as e:
+            return render.admin(respuesta={"error": f"Error cargando usuarios: {e}", "usuarios": []})
+
+        usuarios = [dict(r) for r in (rows or [])]
+        return render.admin(respuesta={"error": None, "usuarios": usuarios})
+
+
 class Info:
     def GET (self):
         return render.info()
 
 class IniciarSecionAdmin:
     def GET(self):
-        return render.iniciar_secion_admin()
+        return render.iniciar_secion_admin(error=None)
+
+    def POST(self):
+        form = web.input(usuario='', password='')
+        usuario = (form.usuario or '').strip()
+        password = (form.password or '').strip()
+
+        if not usuario or not password:
+            return render.iniciar_secion_admin(error="Ingresa usuario y contraseña.")
+
+        # Si te pasan correo en 'usuario', lo aceptamos igual que en InicioSesion
+        try:
+            con = get_db()
+            cur = con.cursor()
+            cur.execute("""
+                SELECT id_usuario, usuario, password
+                FROM usuarios
+                WHERE usuario=? OR correo=?
+            """, (usuario, usuario))
+            row = cur.fetchone()
+            con.close()
+
+            if not row or row["password"] != password:
+                return render.iniciar_secion_admin(error="Usuario o contraseña incorrectos.")
+
+            # Sesión igual que en InicioSesion
+            session.logged_in  = True
+            session.usuario_id = row["id_usuario"]
+            session.username   = row["usuario"]
+
+            # Registrar sesión en tabla 'sesiones' (opcional pero consistente con tus estadísticas)
+            try:
+                con = get_db(); cur = con.cursor()
+                cur.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row["id_usuario"],))
+                con.commit()
+                session.id_sesion = cur.lastrowid
+                con.close()
+            except Exception as e:
+                print("⚠ Error registrando sesión:", e)
+                session.id_sesion = None
+
+            # Al panel
+            raise web.seeother('/admin')
+
+        except Exception as e:
+            return render.iniciar_secion_admin(error=f"Error interno: {e}")
 
 class LeccionRapida:
     def GET(self):
@@ -1597,6 +1667,63 @@ class Estadisticas:
 
     def POST(self):
         return self.GET()
+
+class UsuarioDetalle:
+    def GET(self, uid):
+        # Requiere sesión iniciada (igual que /admin)
+        if not getattr(session, "logged_in", False):
+            return web.seeother('/iniciar_secion_admin')
+
+        # Valida ID
+        try:
+            id_usuario = int(uid)
+        except Exception:
+            return web.notfound("ID de usuario inválido")
+
+        # Verifica que exista el usuario
+        try:
+            con = get_db()
+            cur = con.cursor()
+            cur.execute("SELECT id_usuario FROM usuarios WHERE id_usuario = ?", (id_usuario,))
+            ok = cur.fetchone()
+            con.close()
+            if not ok:
+                # Reusa tu plantilla de admin para mostrar un mensaje
+                return render.admin(respuesta={"error": "El usuario no existe.", "usuarios": []})
+        except Exception as e:
+            return render.admin(respuesta={"error": f"Error validando usuario: {e}", "usuarios": []})
+
+        # Reutiliza las estadísticas pero para ese id
+        data = Estadisticas()._build_stats(id_usuario)
+
+        # KPIs (mismo cálculo que en Estadisticas.GET)
+        kpi_min = data['totales']['minutos_totales']
+        kpi_lec = data['totales']['lecciones']
+        TOTAL_LECCIONES = 9
+        kpi_pro = int((kpi_lec / TOTAL_LECCIONES) * 100) if TOTAL_LECCIONES else 0
+
+        # Datos para tu template de estadísticas
+        bar_data = {
+            'x': data['bar']['x'],
+            'y': data['bar']['y'],
+            'title': data['bar']['title'],
+            'x_title': data['bar']['x_title'],
+            'y_title': data['bar']['y_title']
+        }
+        pie_data = {
+            'labels': data['pie']['labels'],
+            'values': data['pie']['values'],
+            'title': data['pie']['title']
+        }
+
+        # Renderiza EXACTAMENTE tu plantilla de estadísticas
+        return render.estadistica(
+            kpi_min=kpi_min,
+            kpi_lec=kpi_lec,
+            kpi_pro=kpi_pro,
+            bar_data_json=json.dumps(bar_data, ensure_ascii=False),
+            pie_data_json=json.dumps(pie_data, ensure_ascii=False)
+        )
 
 # ─────────────────────── Lanzador ────────────────────────
 if __name__ == "__main__":

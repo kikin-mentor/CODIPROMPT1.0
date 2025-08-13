@@ -7,107 +7,39 @@ $def with (error=None)
     <link rel="shortcut icon" href="/static/logo.png" type="image/x-icon">
     <title>Iniciar sesión</title>
     <style>
-        body {
-            background: linear-gradient(to bottom,#120c2b,#0d4177) ;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .logo {
-            display: flex;
-            justify-content: space-between;
-        }
-        .form-container {
-            background: #220a2e;
-            border-radius: 25px;
-            padding: 32px 32px 24px 32px;
-            box-shadow: 0 4px 24px 0 rgba(0,0,0,0.25);
-            width: 350px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .form-container label {
-            color: #fff;
-            font-weight: 500;
-            margin-bottom: 4px;
-            margin-top: 10px;
-            align-self: flex-start;
-        }
-        .form-container input[type="text"],
-        .form-container input[type="password"] {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 12px;
-            border: none;
-            margin-bottom: 8px;
-            font-size: 1rem;
-            background: #fff;
-            color: #222;
-            box-sizing: border-box;
-        }
-        .form-container input[type="text"]:focus,
-        .form-container input[type="password"]:focus {
-            outline: 2px solid #3a6cf6;
-        }
-        .form-container .btn-iniciar {
-            width: 100%;
-            background: #2e9d2f;
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            padding: 10px 0;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-top: 10px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .form-container .btn-iniciar:hover {
-            background: #217622;
-        }
-        .forgot {
-            margin-top: 20px;
-            background: #220a2e;
-            color: #fff;
-            border-radius: 16px;
-            padding: 16px 0;
-            width: 350px;
-            text-align: center;
-            font-size: 1.05rem;
-        }
-        a {
-            color: #fff;
-            text-decoration: underline;
-        }
+        body{background:linear-gradient(to bottom,#120c2b,#0d4177);min-height:100vh;margin:0;font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;align-items:center}
+        .logo{display:flex;justify-content:space-between}
+        .form-container{background:#220a2e;border-radius:25px;padding:32px 32px 24px;box-shadow:0 4px 24px rgba(0,0,0,.25);width:350px;display:flex;flex-direction:column;align-items:center}
+        .form-container label{color:#fff;font-weight:500;margin-bottom:4px;margin-top:10px;align-self:flex-start}
+        .form-container input[type="text"],.form-container input[type="password"]{width:100%;padding:8px 12px;border-radius:12px;border:none;margin-bottom:8px;font-size:1rem;background:#fff;color:#222;box-sizing:border-box}
+        .form-container input[type="text"]:focus,.form-container input[type="password"]:focus{outline:2px solid #3a6cf6}
+        .form-container .btn-iniciar{width:100%;background:#2e9d2f;color:#fff;border:none;border-radius:16px;padding:10px 0;font-size:1.1rem;font-weight:bold;margin-top:10px;margin-bottom:8px;cursor:pointer;transition:background .2s}
+        .form-container .btn-iniciar:hover{background:#217622}
+        .olvidar{margin-top:20px;color:#fff;border-radius:16px;padding:16px 0;width:350px;text-align:center;font-size:1.05rem}
+        a{color:#fff;text-decoration:underline}
+        .err{color:#ff6b6b;margin:10px 0;text-align:center}
     </style>
 </head>
 <body>
     <div class="logo">
         <img src="/static/logo.png" alt="Logo CodiPROMPT" width="300" height="300">
     </div>
+
     $if error:
-        <div style="color:red; margin-bottom:10px; text-align:center;" class="err">$error</div>
-    <form class="form-container" method="post">
-        <label for="usuario">Usuario</label>
+        <div class="err">$error</div>
+
+    <form class="form-container" method="post" action="/iniciar_secion_admin">
+        <label for="usuario">Usuario o correo</label>
         <input type="text" id="usuario" name="usuario" required>
 
         <label for="password">Contraseña</label>
         <input type="password" id="password" name="password" required>
 
-        <label for="password">Contraseña de administrador</label>
-        <input type="password" id="password" name="password" required>
-        <button type="submit" class="btn-iniciar" href="/datos">Iniciar sesión</button>
-        
+        <button type="submit" class="btn-iniciar">Iniciar sesión</button>
     </form>
-    
-        
+
     <div class="olvidar">
-        <a href="/info" class="Info">¿como iniciar como administrador?</a>
+        <a href="/info" class="Info">¿Cómo iniciar sesión?</a>
     </div>
 </body>
 </html>
