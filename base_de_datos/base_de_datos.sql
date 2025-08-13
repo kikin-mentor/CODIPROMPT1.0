@@ -12,7 +12,7 @@ CREATE TABLE usuarios (
     correo TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     fecha_de_registro DATE DEFAULT CURRENT_DATE,
-    imagen TEXT
+    imagen TEXT,
     rol TEXT
 );
 
@@ -32,7 +32,7 @@ CREATE TABLE lecciones_completadas(
     estado TEXT NOT NULL,
     id_lenguaje TEXT NOT NULL,
     id_time INTEGER NOT NULL,
-    FOREIGN KEY (id_actividad) REFERENCES actividades(id_actividad),
+    FOREIGN KEY (id_actividad) REFERENCES actividades(id_actividad), --REFERENCES se ocupa para referenciar a otra tabla como llave foraanea
     FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
     FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion),
     FOREIGN KEY (id_lenguaje) REFERENCES lenguajes(id_lenguaje),
@@ -45,8 +45,6 @@ CREATE TABLE lenguajes (
     descripcion TEXT NOT NULL
 );
 
-
--- Tabla para registrar sesiones de usuario (inicio y fin de sesión)
 CREATE TABLE sesiones (
     id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
@@ -55,7 +53,6 @@ CREATE TABLE sesiones (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
--- Tabla para registrar el tiempo de uso por sesión
 CREATE TABLE tiempo_de_uso (
     id_time INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
@@ -78,39 +75,33 @@ CREATE TABLE tiempo_leccion (
     FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time)
 );
 
-CREATE TABLE resumen_diario (
-    id_resumen INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE lecciones_completadas (
+    id_leccion_completada INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
-    id_time INTEGER NOT NULL,
-    id_leccion_completada INTEGER NOT NULL,
-    id_prompt INTEGER NOT NULL,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
-    FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
-    FOREIGN KEY (id_leccion_completada) REFERENCES lecciones_completadas(id_leccion_completada),
-    FOREIGN KEY (id_prompt) REFERENCES prompt(id_prompt)
-);
-
-
-CREATE TABLE actividades (
-    id_actividad INTEGER PRIMARY KEY AUTOINCREMENT,
     id_leccion INTEGER NOT NULL,
-    titulo TEXT NOT NULL,
-    descripcion TEXT NOT NULL,
-    contenido TEXT, 
-    respuesta_usuario TEXT, 
-    puntaje INTEGER NOT NULL,
-    FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion)
-);
-
-CREATE TABLE prompt (
-    id_prompt INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_usuario INTEGER NOT NULL,
-    prompt TEXT NOT NULL,
-    respuesta TEXT NOT NULL,
-    prompts_correctos INTEGER NOT NULL,
-    fecha DATE DEFAULT CURRENT_DATE,
+    id_actividad INTEGER NOT NULL,
+    tipo_de_leccion TEXT NOT NULL,
+    estado TEXT NOT NULL,
+    id_lenguaje TEXT NOT NULL,
+    id_time INTEGER NOT NULL,
+    FOREIGN KEY (id_actividad) REFERENCES "actividad"(id_actividad),
+    FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
+    FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion),
+    FOREIGN KEY (id_lenguaje) REFERENCES lenguajes(id_lenguaje),
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
+
+
+CREATE TABLE respuesta_actividades (
+        id_respuesta       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario         INTEGER NOT NULL, 
+        id_leccion         INTEGER NOT NULL,
+        id_actividad       INTEGER NOT NULL,
+        respuesta_usuario  TEXT NOT NULL,
+        puntaje            INTEGER NOT NULL,
+        "feedback"           TEXT,
+        "terminacion de actividad" DATETIME DEFAULT CURRENT_TIMESTAMP
+    );        
 
 CREATE TABLE rol (
     id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
