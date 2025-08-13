@@ -1,14 +1,14 @@
-import web
-import sqlite3
-import re
-import os
-import requests
-import json
-from dotenv import load_dotenv
+import web #ayuda a la carga de web.py
+import sqlite3 # ayuda a la conexion con sqlite3 
+import re # ayuda a validar texto regular en python
+import os #ayuda a interactuar con el sistema operativo
+import requests #facilita el CRUD en solicitudes HTTP 
+import json 
+from dotenv import load_dotenv #carga variables desde el .env
 import html
-import datetime
-import plotly.graph_objs as go
-import plotly.io as pio
+import datetime #obtiene la fecha y hora actual
+import plotly.graph_objs as go #es la que ayuda a crear las graficas y figuras para esta
+import plotly.io as pio #ayuda a que se vean en el html las graficas 
 
 # Cargar variables de entorno
 load_dotenv()
@@ -50,18 +50,31 @@ urls = (
     '/usuario/(\\d+)', 'UsuarioDetalle', 
 )
 
-render = web.template.render('templates')
-api_key = os.getenv("GROQ_API_KEY")
-modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
-DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db")
-web.config.debug = False
-app = web.application(urls, globals())
-session = web.session.Session(app, web.session.DiskStore("sessions"))
+render = web.template.render('templates') #renderiza las plantillas y las manda a templates 
+#este modulo nos deja hacer los render de cada pagina
 
-# =============== BD ÚNICA ===============
-DB_PATH = "codiprompt.db"
+api_key = os.getenv("GROQ_API_KEY") #lee el .env 
+#igual ayuda a aunteticar los solicitudes a groq 
 
-def get_db():
+modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192") #lee las variables del modelo 
+#si no existe esa variable usa llama por defecto
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db") #hace una ruta adsoluta a
+#la base de datos para el script __file__ esto nos ayuda a siempre ejecutar el
+#archivo correvcto 
+
+web.config.debug = False 
+
+app = web.application(urls, globals()) 
+
+session = web.session.Session(app, web.session.DiskStore("sessions")) #configura el sistema de sesiones 
+# Diskstore (sesiones) guarda las sesiones en la carpeta sessions para mayor control
+
+# carga de base de datos 
+DB_PATH = "codiprompt.db" #indica el nombre del archivo de base de datos 
+#ayuda a que el sistema ubique en donde esta el archivo de base de datos 
+
+def get_db(): #los def son funciones reutilizables 
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     return con
@@ -86,13 +99,14 @@ def _init_result_table():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS respuestas_actividades (
         id_respuesta       INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_usuario         INTEGER NOT NULL REFERENCES usuarios(id_usuario),
+        id_usuario         INTEGER NOT NULL,
         id_leccion         INTEGER NOT NULL,
         id_actividad       INTEGER NOT NULL,
         respuesta_usuario  TEXT NOT NULL,
         puntaje            INTEGER NOT NULL,
         feedback           TEXT,
         created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_usuarios) REFERENCES usuarios(id_usuario),            
         UNIQUE(id_usuario, id_leccion, id_actividad) ON CONFLICT REPLACE
     );
     """)

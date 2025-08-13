@@ -2,18 +2,13 @@
 .mode column --hace que se vea en columnas
 PRAGMA foreign_keys = ON; --conecta tablas y relaciones
 
-CREATE TABLE usuarios (
-    id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    apellidos TEXT NOT NULL,
-    usuario TEXT NOT NULL UNIQUE,
-    plantel TEXT NOT NULL,
-    matricula TEXT NOT NULL UNIQUE,
-    correo TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    fecha_de_registro DATE DEFAULT CURRENT_DATE,
-    imagen TEXT,
-    rol TEXT
+CREATE TABLE actividad (
+    id_actividad INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_leccion INTEGER NOT NULL,
+    titulo TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    contenido TEXT,
+    FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion)
 );
 
 CREATE TABLE lecciones (
@@ -39,10 +34,60 @@ CREATE TABLE lecciones_completadas(
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
+CREATE TABLE usuarios (
+    id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    apellidos TEXT NOT NULL,
+    usuario TEXT NOT NULL UNIQUE,
+    plantel TEXT NOT NULL,
+    matricula TEXT NOT NULL UNIQUE,
+    correo TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    fecha_de_registro DATE DEFAULT CURRENT_DATE,
+    imagen TEXT,
+    rol TEXT
+);
+
 CREATE TABLE lenguajes (
     id_lenguaje TEXT PRIMARY KEY,
     nombre_lenguaje TEXT NOT NULL,
     descripcion TEXT NOT NULL
+);
+
+CREATE TABLE prompt_detalle (
+        id_det            INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_ps             INTEGER NOT NULL,
+        num_pregunta INTEGER NOT NULL,
+        prompt_ia         TEXT NOT NULL,
+        respuesta_usuario TEXT,
+        created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_ps) REFERENCES prompt_sesiones(id_ps)
+    );
+
+CREATE TABLE prompt_sesiones (
+        id_ps              INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario         INTEGER NOT NULL,
+        prompts_correctos  INTEGER NOT NULL DEFAULT 0, --ponemos un default para que 
+        prompt_final       TEXT,
+        fecha_completado DATETIME,
+        FOREIGN KEY (id_usuarios) REFERENCES usuarios(id_usuario),     
+    );
+
+CREATE TABLE respuestas_actividades (
+        id_respuesta       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_usuario         INTEGER NOT NULL,
+        id_leccion         INTEGER NOT NULL,
+        id_actividad       INTEGER NOT NULL,
+        respuesta_usuario TEXT NOT NULL,
+        puntaje            INTEGER NOT NULL,
+        feedback           TEXT,
+        terminacion de actividad DATETIME DEFAULT CURRENT_TIMESTAMP,--datetime es un dato que almacena tanto fecha como hora, por otro lado current_timestamp devuelve esos datos actuales
+        FOREIGN KEY (id_usuarios) REFERENCES usuarios(id_usuario),          
+    );
+
+CREATE TABLE rol (
+    id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
+    rol TEXT NOT NULL
 );
 
 CREATE TABLE sesiones (
@@ -63,167 +108,46 @@ CREATE TABLE tiempo_de_uso (
     FOREIGN KEY (id_sesion) REFERENCES sesiones(id_sesion)
 );
 
-CREATE TABLE tiempo_leccion (
-    id_time_leccion INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_usuario INTEGER NOT NULL,
-    id_leccion_completada INTEGER NOT NULL,
-    id_time INTEGER NOT NULL,
-    minutos INTEGER NOT NULL,
-    fecha DATE DEFAULT CURRENT_DATE,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
-    FOREIGN KEY (id_leccion_completada) REFERENCES lecciones_completadas(id_leccion_completada),
-    FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time)
-);
-
-CREATE TABLE lecciones_completadas (
-    id_leccion_completada INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_usuario INTEGER NOT NULL,
-    id_leccion INTEGER NOT NULL,
-    id_actividad INTEGER NOT NULL,
-    tipo_de_leccion TEXT NOT NULL,
-    estado TEXT NOT NULL,
-    id_lenguaje TEXT NOT NULL,
-    id_time INTEGER NOT NULL,
-    FOREIGN KEY (id_actividad) REFERENCES "actividad"(id_actividad),
-    FOREIGN KEY (id_time) REFERENCES tiempo_de_uso(id_time),
-    FOREIGN KEY (id_leccion) REFERENCES lecciones(id_leccion),
-    FOREIGN KEY (id_lenguaje) REFERENCES lenguajes(id_lenguaje),
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
-);
-
-
-CREATE TABLE respuesta_actividades (
-        id_respuesta       INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_usuario         INTEGER NOT NULL, 
-        id_leccion         INTEGER NOT NULL,
-        id_actividad       INTEGER NOT NULL,
-        respuesta_usuario  TEXT NOT NULL,
-        puntaje            INTEGER NOT NULL,
-        "feedback"           TEXT,
-        "terminacion de actividad" DATETIME DEFAULT CURRENT_TIMESTAMP
-    );        
-
-CREATE TABLE rol (
-    id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
-    rol TEXT NOT NULL
-);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 INSERT INTO lecciones (titulo, contenido_html, explicacion) VALUES
-("Lección 1: Estructura de un Documento HTML",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Mi sitio web</title>\n</head>\n<body>\n  <h1>Hola mundo</h1>\n  <p>Este es un documento HTML básico.</p>\n</body>\n</html>",
-"Se explican etiquetas clave: <!DOCTYPE html> define el tipo de documento; <html lang=\"es\"> indica el idioma; <head> incluye metadatos como charset y viewport; <title> muestra el título en la pestaña; <body> contiene el contenido visible como encabezados y párrafos. Se enfatiza el orden correcto de etiquetas y la importancia de cerrarlas adecuadamente."),
+('Lección 1: Estructura de un Documento HTML',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <meta name=''viewport'' content=''width=device-width, initial-scale=1.0''>\n  <title>Mi sitio web</title>\n</head>\n<body>\n  <h1>Hola mundo</h1>\n  <p>Este es un documento HTML básico.</p>\n</body>\n</html>',
+'Se explican etiquetas clave: <!DOCTYPE html> define el tipo de documento; <html lang=''es''> indica el idioma; <head> incluye metadatos como charset y viewport; <title> muestra el título en la pestaña; <body> contiene el contenido visible como encabezados y párrafos. Se enfatiza el orden correcto de etiquetas y la importancia de cerrarlas adecuadamente.'),
 
-("Lección 2: Texto, Encabezados y Formato Semántico",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Texto y encabezados</title>\n</head>\n<body>\n  <h1>Bienvenido a mi página</h1>\n  <h2>Subtítulo importante</h2>\n  <p>Este es un párrafo con <strong>énfasis</strong> y <em>cursiva</em>.</p>\n  <p>También podemos <mark>resaltar</mark> texto y usar <br> saltos de línea.</p>\n</body>\n</html>",
-"Se detallan etiquetas para estructurar texto (<h1> a <h6>, <p>) y aplicar semántica visual (<strong>, <em>, <mark>). El uso correcto de encabezados mejora el SEO y la accesibilidad. <br> permite saltos de línea, y atributos como title y hidden brindan funcionalidad adicional."),
+('Lección 2: Texto, Encabezados y Formato Semántico',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Texto y encabezados</title>\n</head>\n<body>\n  <h1>Bienvenido a mi página</h1>\n  <h2>Subtítulo importante</h2>\n  <p>Este es un párrafo con <strong>énfasis</strong> y <em>cursiva</em>.</p>\n  <p>También podemos <mark>resaltar</mark> texto y usar <br> saltos de línea.</p>\n</body>\n</html>',
+'Se detallan etiquetas para estructurar texto (<h1> a <h6>, <p>) y aplicar semántica visual (<strong>, <em>, <mark>). El uso correcto de encabezados mejora el SEO y la accesibilidad. <br> permite saltos de línea, y atributos como title y hidden brindan funcionalidad adicional.'),
 
-("Lección 3: Enlaces e Imágenes",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Enlaces e Imágenes</title>\n</head>\n<body>\n  <h1>Galería y enlaces</h1>\n  <p>Visita mi <a href=\"https://www.ejemplo.com\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Ir a Ejemplo\">sitio web</a>.</p>\n  <img src=\"banana.jpg\" alt=\"Foto de un plátano\" width=\"300\" height=\"200\" loading=\"lazy\">\n</body>\n</html>",
-"Se estudian enlaces (<a>) con atributos como href, target, rel y title para accesibilidad y seguridad. También se muestra cómo insertar imágenes (<img>) con atributos src, alt, width, height y loading para mejorar rendimiento y accesibilidad."),
+('Lección 3: Enlaces e Imágenes',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Enlaces e Imágenes</title>\n</head>\n<body>\n  <h1>Galería y enlaces</h1>\n  <p>Visita mi <a href=''https://www.ejemplo.com'' target=''_blank'' rel=''noopener noreferrer'' title=''Ir a Ejemplo''>sitio web</a>.</p>\n  <img src=''banana.jpg'' alt=''Foto de un plátano'' width=''300'' height=''200'' loading=''lazy''>\n</body>\n</html>',
+'Se estudian enlaces (<a>) con atributos como href, target, rel y title para accesibilidad y seguridad. También se muestra cómo insertar imágenes (<img>) con atributos src, alt, width, height y loading para mejorar rendimiento y accesibilidad.'),
 
-("Lección 4: Listas ordenadas, desordenadas y anidadas",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Listas HTML</title>\n</head>\n<body>\n  <h1>Tipos de listas</h1>\n  <h2>Lista desordenada</h2>\n  <ul><li>Manzana</li><li>Plátano</li><li>Naranja</li></ul>\n  <h2>Lista ordenada</h2>\n  <ol type=\"A\" start=\"3\"><li>Precalentar el horno</li><li>Preparar la masa</li><li>Hornear</li></ol>\n  <h2>Lista anidada</h2>\n  <ul><li>Frutas<ul><li>Manzana</li><li>Banana</li></ul></li><li>Verduras</li></ul>\n</body>\n</html>",
-"Explica el uso de <ul>, <ol> y <li> para crear listas, con atributos type, start, reversed y value. Se presentan listas anidadas para jerarquías y recomendaciones de organización semántica."),
+('Lección 4: Listas ordenadas, desordenadas y anidadas',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Listas HTML</title>\n</head>\n<body>\n  <h1>Tipos de listas</h1>\n  <h2>Lista desordenada</h2>\n  <ul><li>Manzana</li><li>Plátano</li><li>Naranja</li></ul>\n  <h2>Lista ordenada</h2>\n  <ol type=''A'' start=''3''><li>Precalentar el horno</li><li>Preparar la masa</li><li>Hornear</li></ol>\n  <h2>Lista anidada</h2>\n  <ul><li>Frutas<ul><li>Manzana</li><li>Banana</li></ul></li><li>Verduras</li></ul>\n</body>\n</html>',
+'Explica el uso de <ul>, <ol> y <li> para crear listas, con atributos type, start, reversed y value. Se presentan listas anidadas para jerarquías y recomendaciones de organización semántica.'),
 
-("Lección 5: Tablas en HTML",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Tablas HTML</title>\n</head>\n<body>\n  <h1>Precios de productos</h1>\n  <table border=\"1\">\n    <caption>Lista de productos</caption>\n    <thead><tr><th>Producto</th><th>Precio</th></tr></thead>\n    <tbody><tr><td>Manzana</td><td>$10</td></tr><tr><td>Banana</td><td>$8</td></tr></tbody>\n    <tfoot><tr><td>Total</td><td>$18</td></tr></tfoot>\n  </table>\n</body>\n</html>",
-"Se explica la estructura de una tabla con <table>, <caption>, <thead>, <tbody>, <tfoot>, <tr>, <th> y <td>. También se analizan atributos como border, colspan, rowspan y scope, enfocados en claridad semántica y accesibilidad."),
+('Lección 5: Tablas en HTML',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Tablas HTML</title>\n</head>\n<body>\n  <h1>Precios de productos</h1>\n  <table border=''1''>\n    <caption>Lista de productos</caption>\n    <thead><tr><th>Producto</th><th>Precio</th></tr></thead>\n    <tbody><tr><td>Manzana</td><td>$10</td></tr><tr><td>Banana</td><td>$8</td></tr></tbody>\n    <tfoot><tr><td>Total</td><td>$18</td></tr></tfoot>\n  </table>\n</body>\n</html>',
+'Se explica la estructura de una tabla con <table>, <caption>, <thead>, <tbody>, <tfoot>, <tr>, <th> y <td>. También se analizan atributos como border, colspan, rowspan y scope, enfocados en claridad semántica y accesibilidad.'),
 
-("Lección 6: Formularios HTML",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Formulario de contacto</title>\n</head>\n<body>\n  <h1>Contáctanos</h1>\n  <form action=\"/enviar\" method=\"POST\">\n    <label for=\"nombre\">Nombre:</label>\n    <input type=\"text\" id=\"nombre\" name=\"nombre\" required maxlength=\"50\"><br><br>\n    <label for=\"email\">Correo electrónico:</label>\n    <input type=\"email\" id=\"email\" name=\"correo\" required><br><br>\n    <label for=\"mensaje\">Mensaje:</label><br>\n    <textarea id=\"mensaje\" name=\"mensaje\" rows=\"4\" cols=\"40\" placeholder=\"Escribe tu mensaje aquí...\"></textarea><br><br>\n    <button type=\"submit\">Enviar</button>\n  </form>\n</body>\n</html>",
-"Se abordan los elementos clave para formularios: <form>, <label>, <input>, <textarea> y <button>. Atributos esenciales incluyen action, method, required, maxlength, placeholder, name, id y type, con énfasis en validación y experiencia de usuario."),
+('Lección 6: Formularios HTML',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Formulario de contacto</title>\n</head>\n<body>\n  <h1>Contáctanos</h1>\n  <form action=''/enviar'' method=''POST''>\n    <label for=''nombre''>Nombre:</label>\n    <input type=''text'' id=''nombre'' name=''nombre'' required maxlength=''50''><br><br>\n    <label for=''email''>Correo electrónico:</label>\n    <input type=''email'' id=''email'' name=''correo'' required><br><br>\n    <label for=''mensaje''>Mensaje:</label><br>\n    <textarea id=''mensaje'' name=''mensaje'' rows=''4'' cols=''40'' placeholder=''Escribe tu mensaje aquí...''></textarea><br><br>\n    <button type=''submit''>Enviar</button>\n  </form>\n</body>\n</html>',
+'Se abordan los elementos clave para formularios: <form>, <label>, <input>, <textarea> y <button>. Atributos esenciales incluyen action, method, required, maxlength, placeholder, name, id y type, con énfasis en validación y experiencia de usuario.'),
 
-("Lección 7: CSS Básico dentro de HTML",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>CSS Básico</title>\n  <style>\n    body { background-color: #f0f8ff; font-family: Arial, sans-serif; color: #333; }\n    h1 { text-align: center; color: #0077cc; }\n    p { font-size: 18px; line-height: 1.6; margin: 20px; }\n  </style>\n</head>\n<body>\n  <h1>Estilos con CSS</h1>\n  <p>Este es un ejemplo de cómo aplicar estilos básicos directamente en HTML usando CSS.</p>\n</body>\n</html>",
-"Explica cómo usar CSS interno con <style> dentro del <head>. Se presentan selectores, propiedades como background-color, font-family, color, text-align, font-size, line-height, margin; y buenas prácticas como usar clases e IDs."),
+('Lección 7: CSS Básico dentro de HTML',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>CSS Básico</title>\n  <style>\n    body { background-color: #f0f8ff; font-family: Arial, sans-serif; color: #333; }\n    h1 { text-align: center; color: #0077cc; }\n    p { font-size: 18px; line-height: 1.6; margin: 20px; }\n  </style>\n</head>\n<body>\n  <h1>Estilos con CSS</h1>\n  <p>Este es un ejemplo de cómo aplicar estilos básicos directamente en HTML usando CSS.</p>\n</body>\n</html>',
+'Explica cómo usar CSS interno con <style> dentro del <head>. Se presentan selectores, propiedades como background-color, font-family, color, text-align, font-size, line-height, margin; y buenas prácticas como usar clases e IDs.'),
 
-("Lección 8: HTML Semántico",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>HTML Semántico</title>\n  <style>\n    header, nav, main, section, article, footer {\n      border: 1px solid #ccc;\n      padding: 10px;\n      margin-bottom: 10px;\n    }\n  </style>\n</head>\n<body>\n  <header><h1>Mi Blog</h1></header>\n  <nav><ul><li><a href=\"#\">Inicio</a></li><li><a href=\"#\">Artículos</a></li><li><a href=\"#\">Contacto</a></li></ul></nav>\n  <main>\n    <section>\n      <h2>Últimas publicaciones</h2>\n      <article>\n        <h3>Artículo 1</h3>\n        <p>Este es el contenido del primer artículo.</p>\n      </article>\n      <article>\n        <h3>Artículo 2</h3>\n        <p>Este es el contenido del segundo artículo.</p>\n      </article>\n    </section>\n  </main>\n  <footer><p>© 2025 Mi Blog. Todos los derechos reservados.</p></footer>\n</body>\n</html>",
-"Se explican etiquetas semánticas clave como <header>, <nav>, <main>, <section>, <article>, <footer>. Se destaca cómo mejoran la accesibilidad, el SEO y la estructura lógica del documento."
-)
+('Lección 8: HTML Semántico',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>HTML Semántico</title>\n  <style>\n    header, nav, main, section, article, footer {\n      border: 1px solid #ccc;\n      padding: 10px;\n      margin-bottom: 10px;\n    }\n  </style>\n</head>\n<body>\n  <header><h1>Mi Blog</h1></header>\n  <nav><ul><li><a href=''#''>Inicio</a></li><li><a href=''#''>Artículos</a></li><li><a href=''#''>Contacto</a></li></ul></nav>\n  <main>\n    <section>\n      <h2>Últimas publicaciones</h2>\n      <article>\n        <h3>Artículo 1</h3>\n        <p>Este es el contenido del primer artículo.</p>\n      </article>\n      <article>\n        <h3>Artículo 2</h3>\n        <p>Este es el contenido del segundo artículo.</p>\n      </article>\n    </section>\n  </main>\n  <footer><p>© Mi Blog</p></footer>\n</body>\n</html>',
+'Se introducen etiquetas semánticas (<header>, <nav>, <main>, <section>, <article>, <footer>) para estructurar contenido de forma lógica y accesible. Mejoran el SEO, la organización y la mantenibilidad del código.'),
 
-("Lección 9: Multimedia en HTML5 (Audio, Video e Iframe)",
-"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Multimedia HTML5</title>\n</head>\n<body>\n  <h1>Contenido multimedia en HTML</h1>\n  <h2>Audio</h2>\n  <audio controls>\n    <source src=\"musica.mp3\" type=\"audio/mpeg\">\n    Tu navegador no soporta el elemento de audio.\n  </audio>\n  <h2>Video</h2>\n  <video width=\"320\" height=\"240\" controls>\n    <source src=\"video.mp4\" type=\"video/mp4\">\n    Tu navegador no soporta el elemento de video.\n  </video>\n  <h2>Contenido incrustado (iframe)</h2>\n  <iframe src=\"https://www.youtube.com/embed/dQw4w9WgXcQ\" width=\"560\" height=\"315\" title=\"Video de YouTube\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe>\n</body>\n</html>",
-"Se explora el uso de elementos multimedia en HTML5: <audio>, <video> e <iframe>. Se discuten atributos como controls, src, type, width, height, y buenas prácticas para la inclusión de contenido multimedia."
-);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+('Lección 9: Multimedia en HTML5 (Audio, Video e Iframe)',
+'<!DOCTYPE html>\n<html lang=''es''>\n<head>\n  <meta charset=''UTF-8''>\n  <title>Multimedia HTML5</title>\n</head>\n<body>\n  <h1>Contenido multimedia en HTML</h1>\n  <h2>Audio</h2>\n  <audio controls>\n    <source src=''musica.mp3'' type=''audio/mpeg''>\n    Tu navegador no soporta el elemento de audio.\n  </audio>\n  <h2>Video</h2>\n  <video width=''320'' height=''240'' controls>\n    <source src=''video.mp4'' type=''video/mp4''>\n    Tu navegador no soporta el elemento de video.\n  </video>\n  <h2>Contenido incrustado (iframe)</h2>\n  <iframe src=''https://www.youtube.com/embed/dQw4w9WgXcQ'' width=''560'' height=''315'' title=''Video de YouTube'' frameborder=''0'' allow=''accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'' allowfullscreen></iframe>\n</body>\n</html>',
+'Se explora el uso de elementos multimedia en HTML5: <audio>, <video> e <iframe>. Se discuten atributos como controls, src, type, width, height, y buenas prácticas para la inclusión de contenido multimedia.');
 
 INSERT INTO rol (id_rol, rol) VALUES
 (1, 'Alumno'),
 (2, 'Administrativo');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 INSERT INTO actividad (id_leccion, titulo, descripcion, contenido) VALUES
 (1, 'Tu primer documento HTML estructurado',
@@ -264,7 +188,4 @@ INSERT INTO actividad (id_leccion, titulo, descripcion, contenido) VALUES
 
 
 
-
-
-
-SELECT * FROM usuarios;
+SELECT * FROM usuarios; --PARA VER LAS TABLAS COMPLETAS 

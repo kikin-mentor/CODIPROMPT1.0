@@ -68,4 +68,48 @@ Aqui guardare las consultas necesarias para algunas comprobaciones de base de da
             ON ra.id_usuario = lc.id_usuario AND ra.id_actividad = lc.id_actividad
             ORDER BY ra.puntaje DESC;
 
-9. 
+9. Para borrar contenidos en las tablas ocupamos
+         DELETE FROM usuarios;
+
+10. Para hacer que se inicie de nuevo el contador de autoincrement (tengamos en cuenta que autoincrement incrementa en constante sin importar que borres la tablas, por ello se debe iniciar el contador de nuevo)
+         DELETE FROM sqlite_sequence WHERE name = 'usuarios';
+    no olvides que lecciones, actividades, lenguajes, rol no se borran porque esas son mas para consulta 
+
+11. Para hacer que todos los nombres aparezcan en mayusculas las primera letras 
+
+DROP TRIGGER IF EXISTS capitalize_usuarios_ins;  
+-- Borra el trigger si ya existía, para evitar error al crearlo de nuevo.
+
+CREATE TRIGGER capitalize_usuarios_ins  
+-- Crea un nuevo trigger llamado "capitalize_usuarios_ins".
+
+AFTER INSERT ON usuarios  
+-- Se ejecutará DESPUÉS de que se inserte una fila en la tabla "usuarios".
+
+FOR EACH ROW  
+-- El trigger se ejecuta por cada fila insertada (no solo una vez por sentencia).
+
+BEGIN  
+  UPDATE usuarios  
+  -- Modificamos la tabla "usuarios"...
+
+  SET nombre = CASE  
+                 -- Usamos CASE para decidir cómo se asignará el valor a "nombre".
+                 WHEN NEW.nombre IS NOT NULL AND LENGTH(TRIM(NEW.nombre)) > 0  
+                   -- Si el nuevo nombre NO es NULL y tiene al menos 1 carácter sin contar espacios...
+                   THEN UPPER(SUBSTR(TRIM(NEW.nombre),1,1)) || LOWER(SUBSTR(TRIM(NEW.nombre),2))  
+                   -- Convierte la primera letra a mayúscula y el resto a minúsculas.
+                 ELSE NEW.nombre  
+                   -- Si está vacío o NULL, lo deja igual.
+               END,
+
+      apellido = CASE  
+                   -- Mismo proceso pero para el campo "apellido".
+                   WHEN NEW.apellido IS NOT NULL AND LENGTH(TRIM(NEW.apellido)) > 0  
+                     THEN UPPER(SUBSTR(TRIM(NEW.apellido),1,1)) || LOWER(SUBSTR(TRIM(NEW.apellido),2))  
+                   ELSE NEW.apellido  
+                 END
+
+  WHERE rowid = NEW.rowid;  
+  -- Solo actualiza la fila recién insertada, usando su identificador interno (rowid).
+END;
