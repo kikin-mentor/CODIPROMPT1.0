@@ -563,10 +563,10 @@ class cambiarcontraseña:
 
     def POST(self):
         form = web.input()
-        usuario     = (form.usuario or "").strip()
-        correo      = (form.correo or "").strip()
-        codigo      = (form.antigua_password or "").strip()   # código enviado por correo
-        nueva_pass  = (form.nueva_password or "").strip()
+        usuario = (form.usuario or "").strip()
+        correo = (form.correo or "").strip()
+        codigo = (form.antigua_password or "").strip()   # código enviado por correo
+        nueva_pass = (form.nueva_password or "").strip()
         repite_pass = (form.repite_password or "").strip()
 
         if not usuario or not correo or not codigo or not nueva_pass or not repite_pass:
@@ -575,7 +575,8 @@ class cambiarcontraseña:
             return render.cambiar_contraseña(error="Las contraseñas no coinciden")
 
         try:
-            con = get_db(); cur = con.cursor()
+            con = get_db(); 
+            cur = con.cursor()
 
             # 1) Validar usuario/correo
             cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND correo=?", (usuario, correo))
@@ -617,65 +618,6 @@ class cambiarcontraseña:
         except Exception as e:
             return render.cambiar_contraseña(error=f"Error al cambiar contraseña: {e}")
 
-# ====== Enviar código por email (nuevo) ======
-class EnviarCodigo:
-    def POST(self):
-        try:
-            data = json.loads(web.data())
-            correo_usuario = data.get("correo", "").strip()
-            usuario = data.get("usuario", "").strip()
-
-            if not correo_usuario or not usuario:
-                web.ctx.status = '400 Bad Request'
-                return json.dumps({"error": "Faltan campos (usuario y correo)."})
-
-            # Verificar usuario/correo
-            con = get_db(); cur = con.cursor()
-            cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND correo=?", (usuario, correo_usuario))
-            row = cur.fetchone()
-            if not row:
-                con.close()
-                web.ctx.status = '404 Not Found'
-                return json.dumps({"error": "Usuario/correo no encontrados"})
-
-            # Generar código y expiración (UTC +10 min)
-            codigo = str(random.randint(100000, 999999))
-            expira_dt = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
-            expira_str = expira_dt.strftime("%Y-%m-%d %H:%M:%S")
-
-            # Guardar registro
-            cur.execute("""
-                INSERT INTO verificacion_email (usuario, correo, codigo, expira, usado)
-                VALUES (?, ?, ?, ?, 0)
-            """, (usuario, correo_usuario, codigo, expira_str))
-            con.commit()
-            con.close()
-
-            # Enviar correo
-            if not (SMTP_USER and SMTP_PASS and FROM_EMAIL):
-                web.ctx.status = '500 Internal Server Error'
-                return json.dumps({"error": "SMTP no está configurado (faltan variables de entorno)."})
-
-            cuerpo = f"""Hola {usuario},
-            Tu código de verificación es: {codigo}
-            El cual vence en 10 minutos.
-
-            Si no solicitaste este código, ignora este mensaje."""
-            msg = MIMEText(cuerpo, "plain", "utf-8")
-            msg['Subject'] = 'Código de verificación'
-            msg['From'] = FROM_EMAIL
-            msg['To'] = correo_usuario
-
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-                s.starttls()
-                s.login(SMTP_USER, SMTP_PASS)
-                s.sendmail(FROM_EMAIL, [correo_usuario], msg.as_string())
-
-            web.header('Content-Type', 'application/json')
-            return json.dumps({"ok": True})
-        except Exception as e:
-            web.ctx.status = '500 Internal Server Error'
-            return json.dumps({"error": f"Error enviando código: {e}"})
 
 # ====== Actividades ======
 class actividad1:

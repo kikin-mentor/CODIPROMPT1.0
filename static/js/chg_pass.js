@@ -1,5 +1,3 @@
-chg_pass.js
-
 document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btn_enviar_codigo');
     const estado = document.getElementById('estado-codigo');

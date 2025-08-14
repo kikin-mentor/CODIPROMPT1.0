@@ -1,16 +1,20 @@
 # Bienvenidos a CodiPrompt 
 
-Antes de empezar no olvides instalar estas dependencias en sudo su: 
-````bash
-````
-````
-Estan en el requieriment.txt pero por si acaso instala esto. 
-
 ## ¿Qué hago para ejecutar ?
 primero se entra como super usuario
 ````bash
 sudo su
 ````
+
+Antes de empezar no olvides instalar estas dependencias en sudo su: 
+````bash
+    pip install --upgrade pip
+    pip install web.py
+    pip install requests
+    pip install plotly
+    pip install bcrypt
+````
+
 despues es:
 ````bash
 python3 main.py 80

@@ -77,7 +77,7 @@ $def with (error=None)
     </style>
 </head>
 <body>
-    <script src="/static/js/chg_pass.js"></script>
+    <!-- <script src="/static/js/chg_pass.js"></script> -->
 
     $if error:
         <div style="color:red; margin-bottom:10px; text-align:center; width:400px;">$error</div>
@@ -86,9 +86,9 @@ $def with (error=None)
         <input type="text" id="usuario" name="usuario" class="input-estetico" required>
 
         <label for="correo">Correo electrónico</label>
-        <input type="email" id="correo" name="correo" class="input-estetico" required style="width:220px;">
-        <button type="button" id="btn_enviar_codigo" style="margin-left:235px;margin-top:-42px;">Enviar código</button>
-        <small id="estado-codigo"></small>
+        <input type="email" id="correo" name="correo" class="input-estetico" required style="width:100%;">
+        <!-- <button type="button" id="btn_enviar_codigo" style="margin-left:235px;margin-top:-42px;">Enviar código</button>
+        <small id="estado-codigo"></small> -->
 
         <label for="antigua_password">Ingresa el Codigo que Recibiste</label>
         <input type="password" id="antigua_password" name="antigua_password" class="input-estetico" required>
