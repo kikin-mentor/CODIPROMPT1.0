@@ -10,6 +10,7 @@ Antes de empezar no olvides instalar estas dependencias en sudo su:
 ````bash
     pip install --upgrade pip
     pip install web.py
+    pip install dotenv
     pip install requests
     pip install plotly
     pip install bcrypt

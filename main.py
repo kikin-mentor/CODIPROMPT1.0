@@ -421,7 +421,7 @@ class IniciarSecionAdmin:
             con = get_db()
             cur = con.cursor()
             cur.execute("""
-                SELECT id_usuario, usuario, password
+                SELECT id_usuario, usuario, password, id_rol
                 FROM usuarios
                 WHERE usuario=? OR correo=?
             """, (usuario, usuario))
@@ -431,9 +431,13 @@ class IniciarSecionAdmin:
             if not row or not verify_password(password, row["password"]):
                 return render.iniciar_secion_admin(error="Usuario o contraseña incorrectos.")
 
+            if str(row["id_rol"]) != "2":
+                return render.iniciar_secion_admin(error="Acceso solo para administradores.")
+
             session.logged_in  = True
             session.usuario_id = row["id_usuario"]
             session.username   = row["usuario"]
+            session.rol        = str(row["id_rol"])
 
             try:
                 con = get_db(); cur = con.cursor()
@@ -565,7 +569,7 @@ class cambiarcontraseña:
         form = web.input()
         usuario = (form.usuario or "").strip()
         correo = (form.correo or "").strip()
-        codigo = (form.antigua_password or "").strip()   # código enviado por correo
+        codigo = (form.codigo or "").strip()   # código enviado por el usuario (contraseña actual)
         nueva_pass = (form.nueva_password or "").strip()
         repite_pass = (form.repite_password or "").strip()
 
@@ -575,44 +579,21 @@ class cambiarcontraseña:
             return render.cambiar_contraseña(error="Las contraseñas no coinciden")
 
         try:
-            con = get_db(); 
+            con = get_db()
             cur = con.cursor()
-
-            # 1) Validar usuario/correo
-            cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND correo=?", (usuario, correo))
+            # ... tras verificar existencia de usuario y correo
+            cur.execute("SELECT password FROM usuarios WHERE usuario=? AND correo=?", (usuario, correo))
             row = cur.fetchone()
-            if not row:
+            if not row or not verify_password(codigo, row[0]):
                 con.close()
-                return render.cambiar_contraseña(error="Usuario/correo no encontrados")
+                return render.cambiar_contraseña(error="La contraseña actual no es válida")
 
-            # 2) Validar código vigente y no usado
-            cur.execute("""
-                SELECT id, expira, usado FROM verificacion_email
-                WHERE correo=? AND codigo=?
-                ORDER BY id DESC LIMIT 1
-            """, (correo, codigo))
-            v = cur.fetchone()
-            if not v:
-                con.close()
-                return render.cambiar_contraseña(error="Código inválido")
-
-            expira_str = v['expira'] if isinstance(v['expira'], str) else None
-            now_utc = datetime.datetime.utcnow()
-            try:
-                exp_dt = datetime.datetime.strptime(expira_str.replace('T',' '), "%Y-%m-%d %H:%M:%S")
-            except Exception:
-                exp_dt = now_utc - datetime.timedelta(seconds=1)
-
-            if v['usado'] == 1 or now_utc > exp_dt:
-                con.close()
-                return render.cambiar_contraseña(error="Código expirado o ya usado")
-
-            # 3) Hashear nueva contraseña y actualizar; marcar código como usado
-            nuevo_hash = hash_password(nueva_pass)  # <<< AQUÍ SE HASHEA >>>
+            # Hashea la nueva
+            nuevo_hash = hash_password(nueva_pass)
             cur.execute("UPDATE usuarios SET password=? WHERE usuario=? AND correo=?", (nuevo_hash, usuario, correo))
-            cur.execute("UPDATE verificacion_email SET usado=1 WHERE id=?", (v['id'],))
-            con.commit(); con.close()
-
+            con.commit()
+            con.close()
+            # redirecciona al inicio de sesión
             return web.seeother("/inicio_sesion")
 
         except Exception as e:
