@@ -1,12 +1,8 @@
 # Bienvenidos a CodiPrompt 
 
-Antes de empezar no olvides instalar estas dependencias: 
+Antes de empezar no olvides instalar estas dependencias en sudo su: 
 ````bash
-pip install --upgrade pip
-pip install web.py
-pip install requests 
-pip install dotenv 
-pip install plotly
+````
 ````
 Estan en el requieriment.txt pero por si acaso instala esto. 
 
@@ -15,11 +11,10 @@ primero se entra como super usuario
 ````bash
 sudo su
 ````
-despues es 
+despues es:
 ````bash
 python3 main.py 80
 ````
-para iniciar la aplicacion 
 
 ## Reparticion y encargado de cada cosa
 | Nombre | Encargado(a) de: |Empieza su explicacion en el punto: |

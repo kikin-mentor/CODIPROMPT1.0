@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import web
 import sqlite3
 import re
@@ -14,6 +13,7 @@ import smtplib
 import ssl
 import random
 from email.mime.text import MIMEText
+import bcrypt #hashea las contraseñas 
 
 # =========================
 # Cargar variables de entorno
@@ -81,6 +81,32 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db")
 web.config.debug = False
 app = web.application(urls, globals())
 session = web.session.Session(app, web.session.DiskStore("sessions"))
+
+
+#para hashear: 
+def hash_password(password: str) -> str:
+    """Devuelve un hash bcrypt (con salt incluido)."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def _is_bcrypt_hash(value: str | None) -> bool:
+    """Detecta si lo guardado ya es un hash bcrypt ($2a/$2b/$2y)."""
+    return isinstance(value, str) and value.startswith(("$2a$", "$2b$", "$2y$"))
+
+def verify_password(plain: str, stored: str | None) -> bool:
+    """
+    Verifica la contraseña.
+    - Si 'stored' es bcrypt: checkpw.
+    - Si 'stored' es texto plano (legacy): compara directo (compatibilidad).
+    """
+    if not stored:
+        return False
+    if _is_bcrypt_hash(stored):
+        try:
+            return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
+        except Exception:
+            return False
+    # Compatibilidad con cuentas antiguas (texto plano)
+    return plain == stored
 
 # =========================
 # DB helpers
@@ -248,10 +274,11 @@ class Registro:
         try:
             con = get_db()
             cur = con.cursor()
+            hashed = hash_password(password)
             cur.execute("""
                 INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (nombre, apellidos, usuario, plantel, matricula, correo, password))
+            """, (nombre, apellidos, usuario, plantel, matricula, correo, hashed))
             con.commit()
             con.close()
             return web.seeother('/inicio_sesion')
@@ -293,7 +320,7 @@ class InicioSesion:
             """, (usuario, usuario))
             row = cur.fetchone()
 
-            if row and row["password"] == password:
+            if row and verify_password(password, row["password"]):
                 session.logged_in = True
                 session.usuario_id = row["id_usuario"]
                 session.username = row["usuario"]
@@ -308,7 +335,7 @@ class InicioSesion:
                 return web.seeother('/info_secion')
             else:
                 con.close()
-                return render.inicio_sesion(error="Usuario o contraseña incorrecta")
+                return render.inicio_sesion(error="Correo o contraseña incorrecta")
         except Exception as e:
             return render.inicio_sesion(error=f"Error al procesar los datos: {e}")
 
@@ -401,7 +428,7 @@ class IniciarSecionAdmin:
             row = cur.fetchone()
             con.close()
 
-            if not row or row["password"] != password:
+            if not row or not verify_password(password, row["password"]):
                 return render.iniciar_secion_admin(error="Usuario o contraseña incorrectos.")
 
             session.logged_in  = True
@@ -530,17 +557,16 @@ class Static:
     def GET(self, file):
         return web.redirect('/static/' + file)
 
-# ====== Cambiar contraseña (con código por email) ======
 class cambiarcontraseña:
     def GET(self):
         return render.cambiar_contraseña()
 
     def POST(self):
         form = web.input()
-        usuario = (form.usuario or "").strip()
-        correo = (form.correo or "").strip()
-        codigo  = (form.antigua_password or "").strip()   # aquí va el CÓDIGO recibido por correo
-        nueva_pass = (form.nueva_password or "").strip()
+        usuario     = (form.usuario or "").strip()
+        correo      = (form.correo or "").strip()
+        codigo      = (form.antigua_password or "").strip()   # código enviado por correo
+        nueva_pass  = (form.nueva_password or "").strip()
         repite_pass = (form.repite_password or "").strip()
 
         if not usuario or not correo or not codigo or not nueva_pass or not repite_pass:
@@ -580,8 +606,9 @@ class cambiarcontraseña:
                 con.close()
                 return render.cambiar_contraseña(error="Código expirado o ya usado")
 
-            # 3) Actualizar contraseña y marcar código
-            cur.execute("UPDATE usuarios SET password=? WHERE usuario=? AND correo=?", (nueva_pass, usuario, correo))
+            # 3) Hashear nueva contraseña y actualizar; marcar código como usado
+            nuevo_hash = hash_password(nueva_pass)  # <<< AQUÍ SE HASHEA >>>
+            cur.execute("UPDATE usuarios SET password=? WHERE usuario=? AND correo=?", (nuevo_hash, usuario, correo))
             cur.execute("UPDATE verificacion_email SET usado=1 WHERE id=?", (v['id'],))
             con.commit(); con.close()
 
