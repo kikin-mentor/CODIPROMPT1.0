@@ -77,22 +77,16 @@ Aqui guardare las consultas necesarias para algunas comprobaciones de base de da
 
 11. Para hacer que todos los nombres aparezcan en mayusculas las primera letras 
 
-DROP TRIGGER IF EXISTS capitalize_usuarios_ins;  
--- Borra el trigger si ya existía, para evitar error al crearlo de nuevo.
+DROP TRIGGER IF EXISTS capitalize_usuarios_ins;  -- Borra el trigger si ya existía, para evitar error al crearlo de nuevo.
 
-CREATE TRIGGER capitalize_usuarios_ins  
--- Crea un nuevo trigger llamado "capitalize_usuarios_ins".
+CREATE TRIGGER capitalize_usuarios_ins  -- Crea un nuevo trigger llamado "capitalize_usuarios_ins".
 
-AFTER INSERT ON usuarios  
--- Se ejecutará DESPUÉS de que se inserte una fila en la tabla "usuarios".
+AFTER INSERT ON usuarios  -- Se ejecutará DESPUÉS de que se inserte una fila en la tabla "usuarios".
 
-FOR EACH ROW  
--- El trigger se ejecuta por cada fila insertada (no solo una vez por sentencia).
+FOR EACH ROW  -- El trigger se ejecuta por cada fila insertada (no solo una vez por sentencia).
 
 BEGIN  
   UPDATE usuarios  
-  -- Modificamos la tabla "usuarios"...
-
   SET nombre = CASE  
                  -- Usamos CASE para decidir cómo se asignará el valor a "nombre".
                  WHEN NEW.nombre IS NOT NULL AND LENGTH(TRIM(NEW.nombre)) > 0  

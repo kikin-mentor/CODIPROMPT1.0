@@ -15,6 +15,9 @@ Como recomendacion yo recomiendo hacer un archivo **.sql** donde guardes la crea
 #### Despues de creadas las tablas 
 Aqui explicare las inserciones a base de datos y en main.py
 1. **DB_PATH** se pone para que el sistema o aplicacion sepa donde ubicar el archivo de la base, es para que no este buscando en todas las carpetas la base de datos y sea mas directo el proceso para la base de datos 
-2. **def** los def, los ocupo 
+2. **def** los def, los ocupo mayormanete para obtener datos o crear tablas si es que no existen ya que en los primeros avances del proyecto algunas bases no se creaban ni por mis .sql o inserciones. Incluso las ocupe en algunos casos para guardar respuestas, ya que pasabsa en algunos casos como en el tiempo que no me lo guardaba, para evitar eso, preferi meter un respaldo con los def 
+3. **.strip** ayuda a eliminar campos que yo le pido en este caso lo ocupe para quitar espacios para mejor envio en baase de datos pero si quitamos las comillas sencillas ('nombre', '').strip() y en vez de dejarlas vacias le ponemos una letra, va eliminar dicha letra ('nombre', '**a**').strip() Aqui va eliminar todas las a de nombre 
+4. **sqlite3.IntegrityError** ayuda a que la integridad de la base de datos se conserve es decir que campos que deben de ser unicos o irrepetibles no se repitan para non dañar la logica de la base
+5. Como recordatorio **NO USES #* cuando comentas en .sql es con --
 
 

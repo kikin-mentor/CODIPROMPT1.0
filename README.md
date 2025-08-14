@@ -26,7 +26,7 @@ para iniciar la aplicacion
 |---|---|---|
 | Guillermo Sampayo Solis | Lecciones y Actividades  | 2 |
 | Itzel Cortes Aguirre | Base de datos y Estadistica | 3 |
-| Julio Enrique Olmedo Rivera | Diseño de interfaces | 1 |  
+| Julio Enrique Olmedo Rivera | Diseño de interfaces y envio de correo| 1 |  
 
 Para ver la parte mas explicada de cada miembro porfavor entrar a la carpeta  
 "Explicacion_de_codigo" en este caso, se divide por puntos si deseas un detalle de cada cosa  
