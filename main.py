@@ -1,23 +1,21 @@
-import web
-import sqlite3
-import re
-import os
-import requests
-import json
-from dotenv import load_dotenv
+import web #ayuda a la carga de web.py
+import sqlite3 #ayuda a la conexionn con base de datos 
+import re #ayuda a validar un texto regular para python
+import os #ayuda a interactuar con el sistema operativo
+import requests #facilita el CRUD en solicitudes HTTP
+import json #contenedor para almacenar datos 
+from dotenv import load_dotenv #carga variables del .env
 import html
-import datetime
-import plotly.graph_objs as go
-import plotly.io as pio
-import smtplib
+import datetime #obtiene la fecha y hora actual 
+import plotly.graph_objs as go #es la que ayuda a crear las graficas y figuras para esta
+import plotly.io as pio #ayuda a que se vean en el html las graficas 
+import smtplib 
 import ssl
 import random
 from email.mime.text import MIMEText
-import bcrypt #hashea las contraseñas 
+import bcrypt # encripta las contraseñas en hash  
 
-# =========================
 # Cargar variables de entorno
-# =========================
 load_dotenv()
 
 # ----- SMTP / Email -----
@@ -27,13 +25,13 @@ SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASS = os.getenv("SMTP_PASS")
 FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
 
-# ----- GROQ -----
-api_key = os.getenv("GROQ_API_KEY")
-modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+# Modelos para la IA
+api_key = os.getenv("GROQ_API_KEY") #lee el .env
+#igual ayuda a autenticar los solicitudes a groq
 
-# =========================
-# Rutas
-# =========================
+modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192") #llama las varibles del modelo
+#si no existe esa variable usa llama por defecto
+
 urls = (
     '/', 'Index',
     '/registro', 'Registro',
@@ -72,15 +70,20 @@ urls = (
     '/enviar_codigo', 'EnviarCodigo',       # <<< NUEVO: endpoint para mandar código por correo
 )
 
-render = web.template.render('templates')
+render = web.template.render('templates') #renderiza las plantillas y las manda a templates 
+#este modulo nos deja hacer los render de cada pagina
 
-# =========================
-# App y sesiones
-# =========================
-DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db")
-web.config.debug = False
+# Base de datos
+DB_PATH = os.path.join(os.path.dirname(__file__), "codiprompt.db")  #hace una ruta absoluta a
+#la base de datos para el script __file__ esto nos ayuda a siempre ejecutar el
+#archivo correcto
+
+web.config.debug = False 
+
 app = web.application(urls, globals())
-session = web.session.Session(app, web.session.DiskStore("sessions"))
+
+session = web.session.Session(app, web.session.DiskStore("sessions")) #configura el sistema de sesiones 
+# Diskstore (sesiones) guarda las sesiones en la carpeta sessions para mayor control
 
 
 #para hashear: 
@@ -108,28 +111,27 @@ def verify_password(plain: str, stored: str | None) -> bool:
     # Compatibilidad con cuentas antiguas (texto plano)
     return plain == stored
 
-# =========================
-# DB helpers
-# =========================
-def get_db():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    return con
 
-def obtener_id_tiempo(id_usuario):
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("""
+# Ayuda a la base de datos
+def get_db(): #los def son funciones reutilizables que se utilizan para en este caso abrir conexión a la base de datos
+    con = sqlite3.connect(DB_PATH) #conecta con la base de datos 
+    con.row_factory = sqlite3.Row #permite acceder a columnas por nombre
+    return con #retorna la conexion 
+
+def obtener_id_tiempo(id_usuario): # Obtiene el último tiempo_de_uso registrado del usuario
+    con = get_db() #coneccion con base
+    cur = con.cursor() #crea el cursor para hacer consultas de base de datos 
+    cur.execute(""" 
         SELECT id_time FROM tiempo_de_uso
         WHERE id_usuario=?
         ORDER BY id_time DESC
         LIMIT 1
-    """, (id_usuario,))
-    row = cur.fetchone()
-    con.close()
-    return row[0] if row else 0
+    """, (id_usuario,)) #pasa el id_usuario como algo seguro
+    row = cur.fetchone() #da la primera fila del resultado
+    con.close() #cierra la conexion con base 
+    return row[0] if row else 0 #si se consigue el resultado nos va a mandar 1 si no lo hay nos mandara 0
 
-def _init_result_table():
+def _init_result_table():  #esta crea la tabla respuesta_actividades si es que no existe 
     con = get_db()
     cur = con.cursor()
     cur.execute("""
@@ -150,6 +152,8 @@ def _init_result_table():
     con.close()
 
 def guardar_resultado_actividad(id_usuario, id_leccion, id_actividad, respuesta_html, puntaje, feedback):
+    #ayuda a guardar las respuesta de actividades ya que las inserta en cur.execute
+
     try:
         con = get_db()
         cur = con.cursor()
@@ -163,21 +167,21 @@ def guardar_resultado_actividad(id_usuario, id_leccion, id_actividad, respuesta_
     except Exception as e:
         print("❌ Error guardando resultado de actividad:", e)
 
-def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None:
-    """
-    Devuelve el id_time de tiempo_de_uso asociado a esta sesión,
-    creando o actualizando el registro con los minutos transcurridos hasta ahora.
-    """
+def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None: 
+    # Devuelve el tiempo_de_uso según la sesión iniciada,
+    # ayudando a crear y actualizar el tiempo en vivo
     try:
         con = get_db()
         cur = con.cursor()
 
+        # Verificamos que exista la sesión y calculamos minutos hasta ahora
         cur.execute("SELECT inicio FROM sesiones WHERE id_sesion=?", (id_sesion,))
         row = cur.fetchone()
         if not row:
             con.close()
             return None
 
+        # Minutos transcurridos desde 'inicio' hasta ahora (CURRENT_TIMESTAMP)
         cur.execute("""
             SELECT CAST(ROUND( (julianday(CURRENT_TIMESTAMP) - julianday(inicio)) * 1440 ) AS INTEGER)
             FROM sesiones
@@ -186,6 +190,7 @@ def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None:
         minutos = cur.fetchone()[0] or 0
         minutos = max(0, int(minutos))
 
+        # Busca la existencia de el tiempo_de_uso para la sesion iniciada
         cur.execute("SELECT id_time FROM tiempo_de_uso WHERE id_sesion=?", (id_sesion,))
         trow = cur.fetchone()
 
@@ -205,6 +210,7 @@ def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None:
     except Exception as e:
         print("❌ Error en asegurar_tiempo_en_vivo:", e)
         return None
+
 
 # crear tabla de resultados
 _init_result_table()
@@ -227,11 +233,8 @@ def _init_verificacion_table():
     """)
     con.commit()
     con.close()
-_init_verificacion_table()
+_init_verificacion_table() #esto lo hizo juluis ya no se pa que ocupo esto 
 
-# =========================
-# Vistas básicas
-# =========================
 class Index:
     def GET(self):
         return render.index()
@@ -241,9 +244,9 @@ class Registro:
         return render.registro()
 
     def POST(self):
-        form = web.input()
-        campos = [
-            form.get('nombre', '').strip(),
+        form = web.input() #obtiene los datos enviados del html
+        campos = [ #aqui buscamos los campos que buscamos mandar a la base
+            form.get('nombre', '').strip(), #accede a un valor con el nombre de "nombre"
             form.get('apellidos', '').strip(),
             form.get('usuario', '').strip(),
             form.get('plantel', '').strip(),
@@ -252,37 +255,39 @@ class Registro:
             form.get('password', '').strip(),
             form.get('confirmar', '').strip()
         ]
-        if any(not campo for campo in campos):
+        if any(not campo for campo in campos): #verifica que los campos no esten vacios 
             return render.registro(error="llena los campos para continuar")
 
-        correo = form.get('correo', '').strip()
-        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$'
-        if not re.match(correo_regex, correo):
+        correo = form.get('correo', '').strip() #elimina los espacios en correo
+        correo_regex = r'^([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$' #validacion de correos
+        if not re.match(correo_regex, correo): #errores
             return render.registro(error="Ingresa un correo válido")
 
-        password = form.get('password', '').strip()
-        confirmar = form.get('confirmar', '').strip()
+        password = form.get('password', '').strip() #elimna espacios en la contraseña
+        confirmar = form.get('confirmar', '').strip() #igual en su confirmacion
         if password != confirmar:
             return render.registro(error="Las contraseñas no coinciden")
 
-        nombre = form.get('nombre', '').strip()
+        nombre = form.get('nombre', '').strip() #quitamos espacios
         apellidos = form.get('apellidos', '').strip()
         usuario = form.get('usuario', '').strip()
         plantel = form.get('plantel', '').strip()
         matricula = form.get('matricula', '').strip()
 
         try:
-            con = get_db()
-            cur = con.cursor()
-            hashed = hash_password(password)
+            con = get_db() #conexion 
+            cur = con.cursor() #cursor
             cur.execute("""
                 INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (nombre, apellidos, usuario, plantel, matricula, correo, hashed))
+            """, (nombre, apellidos, usuario, plantel, matricula, correo, password)) #inserta al usuario en el .db
             con.commit()
             con.close()
+            # CAMBIO: antes era return render.inicio_sesion()
+            # Ahora redirigimos para que la URL apunte a /inicio_sesion
             return web.seeother('/inicio_sesion')
-        except sqlite3.IntegrityError as e:
+        except sqlite3.IntegrityError as e: #aqui mostramos errores con claves que deben de ser unicas
+        #para que la base no caiga se mandan los errores para no repetir ciertos campos unicos
             if 'usuario' in str(e):
                 return render.registro(error="El nombre de usuario ya existe")
             if 'correo' in str(e):
@@ -341,6 +346,7 @@ class InicioSesion:
 
 class Logout:
     def POST(self):
+        # Debe estar logueado y tener id_sesion
         if not getattr(session, "logged_in", False) or not getattr(session, "id_sesion", None):
             session.kill()
             return web.seeother('/inicio_sesion')
@@ -352,8 +358,10 @@ class Logout:
             con = get_db()
             cur = con.cursor()
 
+            # marca el fin de las tablas sesiones
             cur.execute("UPDATE sesiones SET fin = CURRENT_TIMESTAMP WHERE id_sesion = ?", (id_sesion,))
 
+            # Calcular minutos en SQL
             cur.execute("""
                 SELECT CAST(ROUND((julianday(COALESCE(fin, CURRENT_TIMESTAMP)) - julianday(inicio)) * 1440) AS INTEGER)
                 FROM sesiones
@@ -362,6 +370,7 @@ class Logout:
             row = cur.fetchone()
             minutos = max(0, int(row[0])) if row and row[0] is not None else 0
 
+            # Insertar en la tabla tiempo_de_uso
             cur.execute("""
                 INSERT INTO tiempo_de_uso (id_usuario, id_sesion, minutos)
                 VALUES (?, ?, ?)
@@ -381,16 +390,17 @@ class InfoSecion:
 
 class Admin:
     def GET(self):
+        # verifica si la sesion existe con logged_in
         if not getattr(session, "logged_in", False):
-            return web.seeother('/iniciar_secion_admin')
+            return web.seeother('/iniciar_secion_admin') #si el admin no esta logueado, lo manda de nuevo al inicio de sesion
 
         try:
-            con = get_db()
+            con = get_db() # Crea un cursor para ejecutar consultas SQL
             cur = con.cursor()
             cur.execute("""
                 SELECT id_usuario, nombre, apellidos, usuario, correo, plantel, fecha_de_registro
                 FROM usuarios
-                WHERE id_rol IN (1, '1')
+                WHERE id_rol IN (1, '1') -- filtra usuarios con rol 1 (admin)
                 ORDER BY fecha_de_registro DESC
             """)
             rows = cur.fetchall()
@@ -398,8 +408,12 @@ class Admin:
         except Exception as e:
             return render.admin(respuesta={"error": f"Error cargando usuarios: {e}", "usuarios": []})
 
-        usuarios = [dict(r) for r in (rows or [])]
-        return render.admin(respuesta={"error": None, "usuarios": usuarios})
+        usuarios = [dict(r) for r in (rows or [])]  # Convierte cada fila en un diccionario para facilitar el movimiento de datos
+        # y evitar si los datos cambian de posicion haya algun error
+        # no es necesario poner r es una manera de definir mis filas, si tu quieres puedes ponerle "filas" o "chetos"
+
+        return render.admin(respuesta={"error": None, "usuarios": usuarios}) # manda la plantilla admin usando un diccionario llamado
+        # respuesta que contiene el error el cual se manda, y usuarios que es la lista de usuarios de la base de datos
 
 class Info:
     def GET (self):

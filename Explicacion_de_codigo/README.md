@@ -14,10 +14,37 @@ Como recomendacion yo recomiendo hacer un archivo **.sql** donde guardes la crea
 
 #### Despues de creadas las tablas 
 Aqui explicare las inserciones a base de datos y en main.py
-1. **DB_PATH** se pone para que el sistema o aplicacion sepa donde ubicar el archivo de la base, es para que no este buscando en todas las carpetas la base de datos y sea mas directo el proceso para la base de datos 
-2. **def** los def, los ocupo mayormanete para obtener datos o crear tablas si es que no existen ya que en los primeros avances del proyecto algunas bases no se creaban ni por mis .sql o inserciones. Incluso las ocupe en algunos casos para guardar respuestas, ya que pasabsa en algunos casos como en el tiempo que no me lo guardaba, para evitar eso, preferi meter un respaldo con los def 
-3. **.strip** ayuda a eliminar campos que yo le pido en este caso lo ocupe para quitar espacios para mejor envio en baase de datos pero si quitamos las comillas sencillas ('nombre', '').strip() y en vez de dejarlas vacias le ponemos una letra, va eliminar dicha letra ('nombre', '**a**').strip() Aqui va eliminar todas las a de nombre 
-4. **sqlite3.IntegrityError** ayuda a que la integridad de la base de datos se conserve es decir que campos que deben de ser unicos o irrepetibles no se repitan para non dañar la logica de la base
-5. Como recordatorio **NO USES #* cuando comentas en .sql es con --
+1. **DB_PATH** se pone para que el sistema o aplicacion sepa donde ubicar el archivo de la base, es para que no este buscando en todas las carpetas la base de datos y sea mas directo el proceso para la base de datos  
 
+2. **def** los def, los ocupo mayormanete para obtener datos o crear tablas si es que no existen ya que en los primeros avances del proyecto algunas bases no se creaban ni por mis .sql o inserciones. Incluso las ocupe en algunos casos para guardar respuestas, ya que pasabsa en algunos casos como en el tiempo que no me lo guardaba, para evitar eso, preferi meter un respaldo con los def  
+
+3. **.strip** ayuda a eliminar campos que yo le pido en este caso lo ocupe para quitar espacios para mejor envio en baase de datos pero si quitamos las comillas sencillas ('nombre', '').strip() y en vez de dejarlas vacias le ponemos una letra, va eliminar dicha letra ('nombre', '**a**').strip() Aqui va eliminar todas las a de nombre  
+
+4. **sqlite3.IntegrityError** ayuda a que la integridad de la base de datos se conserve es decir que campos que deben de ser unicos o irrepetibles no se repitan para non dañar la logica de la base  
+
+5. Como recordatorio **NO USES #* cuando comentas en .sql es con --  
+
+6. Ocupe **init_** en algunos def ya que me permitiainiciar algunas tablas por si no existian, ya que repetidamente no me dejaba iniciar de manera correcta  
+
+7. **cur.execute** ayuda a ejecutar los comandos de base de datos (sql) atraves de un cursor y **conn.commit()** ayuda a guardar los cambios realizados adecuadamente  
+
+8. **CURRENT_TIMESTAMP** ayuda a guardar datos actuales como la hora o fecha ACTUALES  
+
+9. **.get** se usa para obtener valores en un diccionario, si se le puso form por la palabra *formulario* ya que quiero que obtenga valores del formulario, y los lea, ayuda igual a evitar errores como campos vacios o errores en correo electronico  
+
+10. **getattr** lee algun campo de forma segura dentro de los parentesis se pon el campo y  
+
+11. **julianday** en sqlite3 sirve para convertir la fecha/hora en numero decimal y los dias transcurridos desde el año juliano  
+
+12. **COALESCE** colobora la finalizacion de sesiones, si no "cerramos sesion" en el perfil el valor en la tabla sesiones aparecera como NULL (nulo o sin valor) y si "cerramos sesion" nos mandar la fecha y hora actual de ese cierre y la mandara a la tabla sesiones en el .db  
+
+13. **(julianday(...) - julianday(inicio))** hace que la fecha de fin se reste con la fecha de inicio y el resultado nos lo dara en dias pero para evitar eso agregamos **(*1440)** ya que este surge por la multiplicacion de las 24 horas por los 60 minutos que tiene cada hora y con esto logramos que ahora el resultado salga en **minutos** y no en dias.  
+
+14. **ROUND** ayuda a redondear numeros (de 5.55 minutos a 5.6 minutos)  
+
+15. **CAST(... AS INTEGER)** convierte el numero a entero (para no tomar segundos) esto lo hacemos por si round termina redondeando los regundos y no a enteros hace que ese 5.6 se convierta en 6  
+
+16. Para esta logueado buscamos en la carpeta session que guarda los datos del usuario, si no hay ningun dato de usuarrio el logueado no existe :3  
+
+17. 
 
