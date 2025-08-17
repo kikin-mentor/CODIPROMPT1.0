@@ -192,16 +192,24 @@ def asegurar_tiempo_en_vivo(id_usuario: int, id_sesion: int) -> int | None:
 
         # Busca la existencia de el tiempo_de_uso para la sesion iniciada
         cur.execute("SELECT id_time FROM tiempo_de_uso WHERE id_sesion=?", (id_sesion,))
-        trow = cur.fetchone()
+        trow = cur.fetchone() #trow es la fila que obtiene de la consulta
 
         if trow:
+            # Si existe un registro anterior (trow no está vacío)...
             id_time = trow["id_time"] if isinstance(trow, sqlite3.Row) else trow[0]
-            cur.execute("UPDATE tiempo_de_uso SET minutos=? WHERE id_time=?", (minutos, id_time))
+            #si trow viene como fila, lo pasa como id_time
+            # si trow esta repetido usa 0 
+
+            cur.execute("UPDATE tiempo_de_uso SET minutos=? WHERE id_time=?", (minutos, id_time)) 
+            # actualiza el campo minutos en la tabla tiempo_de_uso del registro con ese id_time.
+
         else:
+            # Si no existe un registro previo (trow está vacío)...
             cur.execute("""
                 INSERT INTO tiempo_de_uso (id_usuario, id_sesion, minutos)
                 VALUES (?, ?, ?)
             """, (id_usuario, id_sesion, minutos))
+            # Inserta un nuevo registro en la tabla tiempo_de_uso con los valores: usuario, sesión y minutos.
             id_time = cur.lastrowid
 
         con.commit()
@@ -277,10 +285,11 @@ class Registro:
         try:
             con = get_db() #conexion 
             cur = con.cursor() #cursor
+            hashed = hash_password(password)
             cur.execute("""
                 INSERT INTO usuarios (nombre, apellidos, usuario, plantel, matricula, correo, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (nombre, apellidos, usuario, plantel, matricula, correo, password)) #inserta al usuario en el .db
+            """, (nombre, apellidos, usuario, plantel, matricula, correo, hashed)) #inserta al usuario en el .db
             con.commit()
             con.close()
             # CAMBIO: antes era return render.inicio_sesion()
@@ -424,48 +433,55 @@ class IniciarSecionAdmin:
         return render.iniciar_secion_admin(error=None)
 
     def POST(self):
-        form = web.input(usuario='', password='')
-        usuario = (form.usuario or '').strip()
-        password = (form.password or '').strip()
+        form = web.input(usuario='', password='') # recibe datos del formulario usuario y password o contraseña
+        usuario = (form.usuario or '').strip() #manda al usuario sin espacios 
+        password = (form.password or '').strip() #manda la contraseña sin espacios 
 
-        if not usuario or not password:
+        if not usuario or not password: #este error pasa si el usuario o contraseña estan vacios 
             return render.iniciar_secion_admin(error="Ingresa usuario y contraseña.")
 
         try:
-            con = get_db()
-            cur = con.cursor()
+            con = get_db() #obtiene la base 
+            cur = con.cursor() #inicia el cursor 
             cur.execute("""
                 SELECT id_usuario, usuario, password, id_rol
                 FROM usuarios
                 WHERE usuario=? OR correo=?
-            """, (usuario, usuario))
-            row = cur.fetchone()
-            con.close()
+            """, (usuario, usuario)) #busca al usuarion y correo 
+            row = cur.fetchone() #obtiene la concidencia 
+            con.close() #cierra la consulta 
 
-            if not row or not verify_password(password, row["password"]):
+            if not row or not verify_password(password, row["password"]): #este erro te manda por si
+            #la contraseña no coinciden con la base de datos 
                 return render.iniciar_secion_admin(error="Usuario o contraseña incorrectos.")
 
-            if str(row["id_rol"]) != "2":
+            if str(row["id_rol"]) != "2": #busca si el usuario esta con el rol 2 
                 return render.iniciar_secion_admin(error="Acceso solo para administradores.")
 
-            session.logged_in  = True
+            #si pasa las validaciones la sesion se guarda
+            session.logged_in  = True 
             session.usuario_id = row["id_usuario"]
             session.username   = row["usuario"]
             session.rol        = str(row["id_rol"])
 
             try:
+                #registra una nueva sesion en la tabla sesiones 
                 con = get_db(); cur = con.cursor()
                 cur.execute("INSERT INTO sesiones (id_usuario) VALUES (?)", (row["id_usuario"],))
                 con.commit()
+                #aca ya se guardan las sesiones con un nuevo id
                 session.id_sesion = cur.lastrowid
                 con.close()
-            except Exception as e:
+            except Exception as e: 
+                #si ocurre un error al registrar la sesion lo mandamos a la consola 
+                # pero aun asi permite que el usuario continue 
                 print("⚠ Error registrando sesión:", e)
                 session.id_sesion = None
 
-            raise web.seeother('/admin')
+            raise web.seeother('/admin') #nos manda a admin
 
         except Exception as e:
+            #si ocurre un error inesperado lo muestra 
             return render.iniciar_secion_admin(error=f"Error interno: {e}")
 
 class LeccionRapida:
@@ -475,70 +491,53 @@ class LeccionRapida:
 class PerfilUser:
     def GET(self):
         print("DEBUG >> session.usuario_id:", getattr(session, 'usuario_id', None))
+        #imprime el usuario en consola el id_usuario para ver si la sesion existe y la guarda
+
         if hasattr(session, 'usuario_id') and session.usuario_id:
+            #compruba si esiste el id_usuario en la sesion y que no este vacio
+
             usuario_id = session.usuario_id
             con = get_db()
             cur = con.cursor()
+            # busca el nombre de usuario en la base de datos
+
             cur.execute("SELECT usuario FROM usuarios WHERE id_usuario=?", (usuario_id,))
             row = cur.fetchone()
             con.close()
+            # si existe fila, obtiene el nombre; si no, usa "usuario" como texto 
             nombre_usuario = row['usuario'] if row else "usuario"
             return render.perfil_user(usuario=nombre_usuario)
-        else:
+        else: #si no hay usuario en la sesion te manda a inicio sesion
             return web.seeother('/inicio_sesion')
 
     def POST(self):
         if not hasattr(session, 'usuario_id') or not session.usuario_id:
-            return web.seeother('/inicio_sesion')
+            #aqui verifica si hay sesion activa
+            return web.seeother('/inicio_sesion') #si no hay sesion activa lo manda a inicio de sesion
 
         form = web.input()
         usuario_id = session.usuario_id
 
         # Cambio de nombre
         if 'nombre' in form:
+            # si el formulario contiene el campo nombre 
             nuevo_nombre = form.get('nombre', '').strip()
             if nuevo_nombre:
+                #si el nuevo nombre no esta vacio intenta insertarlo a la base de datos 
                 try:
                     con = get_db()
                     cur = con.cursor()
                     cur.execute("UPDATE usuarios SET usuario=? WHERE id_usuario=?", (nuevo_nombre, usuario_id))
                     con.commit()
                     con.close()
-                    return web.seeother('/perfil_user')
+                    return web.seeother('/perfil_user') #redirigue a perfil_user
                 except Exception as e:
                     return render.perfil_user(usuario=nuevo_nombre, error=f"Error al actualizar nombre: {e}")
-            else:
+            else: 
+                #aqui ve si el nombre esta vacio
                 return render.perfil_user(usuario=form.get('nombre'), error="El nombre no puede estar vacío")
 
-        # Borrado de cuenta
-        usuario = form.get('usuario', '').strip()
-        password = form.get('password', '').strip()
-
-        if not usuario or not password:
-            return render.perfil_user(usuario=form.get('nombre'), error="Debes ingresar usuario y contraseña para borrar la cuenta")
-
-        try:
-            con = get_db()
-            cur = con.cursor()
-            cur.execute("SELECT id_usuario FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
-            row = cur.fetchone()
-            if not row:
-                con.close()
-                return render.perfil_user(usuario=form.get('nombre'), error="Usuario o contraseña incorrectos")
-
-            id_usuario = row['id_usuario']
-            cur.execute("DELETE FROM tiempo_de_uso WHERE id_usuario=?", (id_usuario,))
-            cur.execute("DELETE FROM sesiones WHERE id_usuario=?", (id_usuario,))
-            cur.execute("DELETE FROM usuarios WHERE id_usuario=?", (id_usuario,))
-            con.commit()
-            con.close()
-            session.kill()
-            return render.index(mensaje="Cuenta eliminada correctamente")
-
-        except Exception as e:
-            return render.perfil_user(usuario=form.get('nombre'), error=f"Error al borrar la cuenta: {e}")
-
-# ====== Lecciones ======
+# ------- lecciones -------
 class Leccion1:
     def GET(self):
         return render.leccion1()
@@ -580,7 +579,9 @@ class cambiarcontraseña:
         return render.cambiar_contraseña()
 
     def POST(self):
+        # si el usuario manda un formulario se procesa aquí.
         form = web.input()
+
         usuario = (form.usuario or "").strip()
         correo = (form.correo or "").strip()
         codigo = (form.codigo or "").strip()   # código enviado por el usuario (contraseña actual)
@@ -588,17 +589,20 @@ class cambiarcontraseña:
         repite_pass = (form.repite_password or "").strip()
 
         if not usuario or not correo or not codigo or not nueva_pass or not repite_pass:
-            return render.cambiar_contraseña(error="Llena todos los campos")
+            return render.cambiar_contraseña(error="Llena todos los campos") 
+            #este valida que no haya campos vacios
+
         if nueva_pass != repite_pass:
             return render.cambiar_contraseña(error="Las contraseñas no coinciden")
+            #este valida que las contraseñas coincidan
 
         try:
             con = get_db()
             cur = con.cursor()
-            # ... tras verificar existencia de usuario y correo
+            # busca al usuario y correo
             cur.execute("SELECT password FROM usuarios WHERE usuario=? AND correo=?", (usuario, correo))
             row = cur.fetchone()
-            if not row or not verify_password(codigo, row[0]):
+            if not row or not verify_password(codigo, row[0]): #aqui valida que las contraseñas coincidan
                 con.close()
                 return render.cambiar_contraseña(error="La contraseña actual no es válida")
 
@@ -614,7 +618,7 @@ class cambiarcontraseña:
             return render.cambiar_contraseña(error=f"Error al cambiar contraseña: {e}")
 
 
-# ====== Actividades ======
+# ------ actividades ------
 class actividad1:
     def GET(self):
         return render.actividad1(resultado=None, codigo_enviado="")

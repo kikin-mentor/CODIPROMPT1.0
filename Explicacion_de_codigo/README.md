@@ -46,5 +46,6 @@ Aqui explicare las inserciones a base de datos y en main.py
 
 16. Para esta logueado buscamos en la carpeta session que guarda los datos del usuario, si no hay ningun dato de usuarrio el logueado no existe :3  
 
-17. 
+17. **hasattr** esta funcion comprueba si un objeto tiene un atributo en especifico, toma los dos objetos en forma de cadena. Esto nos ayuda a hacer comprobaciones si el atributo existe manda TRUE si no manda FALSE.  
 
+18. 
