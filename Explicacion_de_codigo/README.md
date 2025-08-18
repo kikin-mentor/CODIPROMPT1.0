@@ -32,7 +32,7 @@ Aqui explicare las inserciones a base de datos y en main.py
 
 9. **.get** se usa para obtener valores en un diccionario, si se le puso form por la palabra *formulario* ya que quiero que obtenga valores del formulario, y los lea, ayuda igual a evitar errores como campos vacios o errores en correo electronico  
 
-10. **getattr** lee algun campo de forma segura dentro de los parentesis se pon el campo y  
+10. **getattr** es una función incorporada que permite obtener el valor de un atributo indicando su nombre como una cadena.
 
 11. **julianday** en sqlite3 sirve para convertir la fecha/hora en numero decimal y los dias transcurridos desde el año juliano  
 
@@ -48,4 +48,15 @@ Aqui explicare las inserciones a base de datos y en main.py
 
 17. **hasattr** esta funcion comprueba si un objeto tiene un atributo en especifico, toma los dos objetos en forma de cadena. Esto nos ayuda a hacer comprobaciones si el atributo existe manda TRUE si no manda FALSE.  
 
-18. 
+18. Ocupe feedback (retroalimentacion) en ingles solo para recortar la palabra en SQL  
+
+19. **flags=_re.DOTALL** permite capturar varias líneas
+
+18. **flags=_re.IGNORECASE** ignora mayúsculas/minúsculas
+
+## 3. Estadisticas 
+En este caso ocupe la libreria de **Plotly** desde python para hacer graficas interactivas 
+### ¿Como hacemos para iniciar en plotly? 
+1. Yo recomiendo que vayas a las librerias principales y busques las graficas que buscas hacer (aqui el enlace:https://dash.plotly.com/?_gl=1*1c7p6xb*_gcl_au*ODMxODgwNTI5LjE3NTI3NjA2OTA.*_ga*NTY2NDU2OTA4LjE3NTI3NjA2OTE.*_ga_6G7EE0JNSC*czE3NTU0NzkxNTUkbzIkZzAkdDE3NTU0NzkxNTUkajYwJGwwJGgw)
+2. Para ver en html primero ocupamos la libreria  **plotly.graph_objs as go** es la que ayuda a crear las graficas y figuras para esta para la interaccion y **plotly.io as pio** ayuda a que se puedan mostrar o guardar graficos en el html de mejor manera 
+#### ¿que hice yo?

@@ -621,16 +621,20 @@ class cambiarcontraseña:
 # ------ actividades ------
 class actividad1:
     def GET(self):
+        #aqui manda la plantilla de actividad sin resultado ni codigo
         return render.actividad1(resultado=None, codigo_enviado="")
 
     def POST(self):
-        form = web.input(codigo_html="")
-        codigo = (form.codigo_html or "").strip()
-        if not codigo:
+        form = web.input(codigo_html="") # recibe lo que el usuario mandó en el codigo
+        codigo = (form.codigo_html or "").strip() #quita los espacios del codigo
+        if not codigo: #aqui valida que mandemos un codigo 
             return render.actividad1(resultado="Por favor escribe tu código antes de enviarlo.", codigo_enviado="")
 
-        api_key1 = os.getenv("GROQ_API_KEY")
+        # Clave de API y modelo a usar (desde variables de entorno .env)
+        api_key1 = os.getenv("GROQ_API_KEY") 
         modelo = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+
+        # Criterios de evaluación: lo que debe cumplir el código HTML del estudiante.
         criterio = (
             "Crea un archivo nuevo con la estructura básica de un documento HTML5. "
             "Incluye en el <body> un título que diga “Hola, mundo” y un párrafo donde te presentes (nombre, edad, afición). "
@@ -638,12 +642,15 @@ class actividad1:
             "Dentro de <head> aparecen las meta etiquetas correctas y el título. "
             "Dentro del <body> hay un encabezado <h1> y un <p> con presentación."
         )
-        if not api_key1:
+        if not api_key1: # Aqui nos mandara error si la api falta 
             return render.actividad1(resultado="Falta la clave de API en el archivo .env (GROQ_API_KEY).", codigo_enviado=codigo)
 
+        # Prompt que se manda a la API de GROQ para evaluar el código.
         prompt = ("Evalúa el siguiente código HTML proporcionado por un estudiante. "
                   "Califica de 1 a 10 y proporciona retroalimentación clara sobre "
                   "qué hace bien, qué está mal y cómo puede mejorar.\n\nCódigo:\n" + codigo)
+        
+        # Datos para la petición: modelo, mensajes y temperatura 
         payload = {
             "model": modelo,
             "messages": [
@@ -654,39 +661,43 @@ class actividad1:
         }
 
         try:
-            resp = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key1}"},
-                json=payload,
-                timeout=60
+            # Se hace la petición POST a la API de GROQ.
+            resp = requests.post( #Realiza la petición HTTP POST a la API de Groq.
+                "https://api.groq.com/openai/v1/chat/completions", 
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key1}"}, # Encabezados con tipo y autorización.
+                json=payload, # Envia el payload como JSON.
+                timeout=60 #tiempo de espera 
             )
-            resp.raise_for_status()
-            data = resp.json()
-            feedback = data["choices"][0]["message"]["content"]
+            resp.raise_for_status() # Si hay error HTTP, lanza excepción.
+            data = resp.json()  # Convierte la respuesta a JSON.
+            feedback = data["choices"][0]["message"]["content"] # Extrae retroalimentación de la IA
 
-            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback)
-            puntaje = int(m.group(1)) if m else 0
+            # Busca un número del 1 al 10 en el feedback (retroalimentacion).
+            m = re.search(r'(?<!\d)(10|[0-9])(?:\s*/\s*10)?', feedback) 
+            puntaje = int(m.group(1)) if m else 0 # Convierte el número encontrado a entero; si no hay, usa 0.
 
             if getattr(session, "usuario_id", None):
                 try:
-                    guardar_resultado_actividad(session.usuario_id, 1, 1, codigo, puntaje, feedback)
-                except Exception as e:
-                    print("⚠️ No se pudo guardar respuesta de actividad1:", e)
+                    guardar_resultado_actividad(session.usuario_id, 1, 1, codigo, puntaje, feedback) # Guarda el resultado si hay usuario logueado.
+                except Exception as e: #error si no se puede guardar la respuesta
+                    print("⚠️ No se pudo guardar respuesta de actividad1:", e) 
 
-            if puntaje >= 7 and getattr(session, "usuario_id", None):
-                try:
+            if puntaje >= 7 and getattr(session, "usuario_id", None): #busca si el puntaje es aprobatario (7 para arriba) y si la
+            #sesion existe 
+                try:  # intenta marcar la lección como completada
                     con = get_db(); cur = con.cursor()
                     id_time_actual = asegurar_tiempo_en_vivo(session.usuario_id, session.id_sesion) if getattr(session, "id_sesion", None) else None
+                    # Asegura/obtiene id_time ligado a la sesión activa (si existe).
                     cur.execute("""
                         INSERT INTO lecciones_completadas
                         (id_usuario, id_leccion, id_actividad, tipo_de_leccion, estado, id_lenguaje, id_time)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (session.usuario_id, 1, 1, "HTML", "completada", 1, id_time_actual))
+                    """, (session.usuario_id, 1, 1, "HTML", "completada", 1, id_time_actual)) # Inserta registro de lección completada.
                     con.commit(); con.close()
                 except Exception as e:
                     print("⚠️ Error insertando lección completada:", e)
 
-            return render.actividad1(resultado=feedback, codigo_enviado=codigo)
+            return render.actividad1(resultado=feedback, codigo_enviado=codigo) # Devuelve la vista con el feedback y el código del alumno.
 
         except Exception as e:
             return render.actividad1(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
@@ -978,8 +989,10 @@ class actividad9:
         except Exception as e:
             return render.actividad9(resultado=f"Error al evaluar: {str(e)}", codigo_enviado=codigo)
 
-# ====== Prompt Trainer (con persistencia) ======
-TRAINER_QUESTIONS = [
+# ------clase para la leccion rapida -------
+
+TRAINER_QUESTIONS = [ 
+    # Lista de preguntas que el entrenador hará al usuario sobre desarrollo web
     "¿Tu documento comienza con &lt;<!DOCTYPE html>&gt; y contiene &lt;<html>&gt;, <head> y <body> correctamente estructurados?",
     "¿Declaraste el idioma del sitio con <html lang=\"es\">?",
     "¿Utilizarás etiquetas semánticas como <header>, <footer>, <section>, <article> para mejorar accesibilidad y SEO?",
@@ -1001,26 +1014,43 @@ TRAINER_QUESTIONS = [
     "¿La interfaz será accesible para navegación por teclado y lectores de pantalla (ARIA, roles)?"
 ]
 
-def render_safe_markdownish(md_text: str) -> str:
+def render_safe_markdownish(md_text: str) -> str: 
+    # Convierte texto estilo Markdown a HTML seguro, manejando bloques de código.
     import re as _re, html as _html
-    blocks = []
+    blocks = []  # lista para guardar bloques de código.
     def _block_repl(m):
-        lang = (m.group(1) or "").strip()
-        code = m.group(2)
-        blocks.append(f'<pre><code class="lang-{_html.escape(lang)}">{_html.escape(code)}</code></pre>')
-        return f"@@BLOCK{len(blocks)-1}@@"
-    text = _re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=_re.DOTALL)
+        # reemplaza bloques de código ```lang ... ``` por <pre><code> seguro.
+        lang = (m.group(1) or "").strip()  #obtenemos el lenguaje
+        code = m.group(2) #obtenemos el contenido del bloque codigo 
+        blocks.append(f'<pre><code class="lang-{_html.escape(lang)}">{_html.escape(code)}</code></pre>') #creamos un bloque para mostrar el HTML modificado
+        return f"@@BLOCK{len(blocks)-1}@@" 
+        # Retorna un marcador temporal para el bloque de código procesado
+        #esto se usa despues para reemplazar el bloque original
+
+    text = _re.sub(r"```(\w+)?\s*\n(.*?)\n```", _block_repl, md_text, flags=_re.DOTALL) 
+    #reemplaza el markdown en md_text , el flag permite que el punto coincida con saltos de linea
+
     html_match = _re.search(r"<!DOCTYPE html>.*</html>", md_text, flags=_re.DOTALL | _re.IGNORECASE)
-    if html_match:
-        code = html_match.group(0)
-        blocks.append(f'<pre><code class="lang-html">{_html.escape(code)}</code></pre>')
+    # Busca si hay un bloque de código HTML completo en el texto, desde <!DOCTYPE html> hasta </html>
+
+    if html_match: #si se encuentra un bloque HTML completo
+        code = html_match.group(0)  # Extrae el bloque de texto completo que coincidió con la búsqueda
+
+        # Guarda el bloque de código escapado (para que no se ejecute como HTML)
+        # y lo envuelve en etiquetas <pre><code> para mostrarlo con formato de código
+        blocks.append(f'<pre><code class="lang-html">{_html.escape(code)}</code></pre>') 
+
+        # Dentro del texto original, reemplaza el bloque de HTML por un marcador temporal
         text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
-    text = _html.escape(text)
-    for i, block_html in enumerate(blocks):
+
+    text = _html.escape(text) #convierte todo en texto plano
+    for i, block_html in enumerate(blocks): 
         text = text.replace(f"@@BLOCK{i}@@", block_html)
     return text
 
 def _groq(modelo, system, user):
+    # Obtiene la clave de la API desde las variables de entorno
+
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("Falta GROQ_API_KEY en variables de entorno.")
@@ -1036,14 +1066,25 @@ def _groq(modelo, system, user):
                       headers=headers, json=payload, timeout=30)
     r.raise_for_status()
     data = r.json()
-    return data["choices"][0]["message"]["content"].strip()
+    return data["choices"][0]["message"]["content"].strip() # Devuelve el texto de la primera respuesta generada por el modelo
 
 def _ensure_state(sess):
+    # Verifica si el objeto 'sess' (sesión) no tiene el atributo 'trainer'
+    # o si lo tiene pero no es un diccionario
     if not hasattr(sess, "trainer") or not isinstance(sess.trainer, dict):
+        # En ese caso inicializa 'trainer' como un diccionario vacío
         sess.trainer = {}
+    
+    # Establece valores por defecto dentro del diccionario 'trainer'
+    # - "activo": indica si el entrenador/chat está activado
+    # - "paso": lleva el conteo del progreso (etapa actual)
+    # - "historial": almacena las interacciones previas (lista de mensajes, prompts, etc.)
     sess.trainer.setdefault("activo", False)
     sess.trainer.setdefault("paso", 0)
     sess.trainer.setdefault("historial", [])
+
+    # Verifica si la sesión tiene un atributo 'trainer_ps_id'
+    # Si no lo tiene, lo crea y lo inicializa en None
     if not hasattr(sess, "trainer_ps_id"):
         sess.trainer_ps_id = None
     return sess.trainer
@@ -1053,7 +1094,7 @@ def _historial_to_text(historial):
         return "Sin respuestas previas."
     return "\n".join(f"{i+1}. P: {qa['q']}\n   R: {qa['a']}" for i, qa in enumerate(historial))
 
-def _init_prompt_tables():
+def _init_prompt_tables(): #inicia las tablas de prompts si no existen
     con = get_db(); cur = con.cursor()
     cur.execute("""
     CREATE TABLE IF NOT EXISTS prompt_sesiones (
@@ -1251,9 +1292,9 @@ Comandos disponibles:
 
         return safe_json(respuesta_raw)
 
-# ====== Util para fechas en estadísticas ======
+# -----clase de estadísticas -----
 def _to_ymd(value):
-    """Convierte a 'YYYY-MM-DD' desde múltiples formatos (ISO, 'YYYY-MM-DD HH:MM:SS', epoch)."""
+    # Convierte a 'YYYY-MM-DD' desde múltiples formatos (ISO, 'YYYY-MM-DD HH:MM:SS', epoch).
     if value is None:
         return None
     try:
