@@ -1014,6 +1014,28 @@ TRAINER_QUESTIONS = [
     "¿La interfaz será accesible para navegación por teclado y lectores de pantalla (ARIA, roles)?"
 ]
 
+# --- NUEVO: detector de respuestas pobres (sí/no, muy cortas, etc.) ---
+def _is_poor_answer(texto: str) -> bool:
+    # Detecta respuestas demasiado cortas o tipo sí/no para forzar mayor elaboración
+    t = (texto or "").strip().lower()
+    if not t:
+        return True
+    # muy corta
+    if len(t) < 12:
+        return True
+    # 1 a 3 palabras suele ser pobre
+    if len(t.split()) <= 3:
+        return True
+    # sí/no y variantes muy breves
+    monos = {"si", "sí", "no", "ok", "vale", "okay", "claro", "afirmativo", "negativo"}
+    if t in monos:
+        return True
+    if t.startswith(("si ", "sí ", "no ")):
+        # típico "sí, lo hice" (pobre)
+        if len(t.split()) <= 4:
+            return True
+    return False
+
 def render_safe_markdownish(md_text: str) -> str: 
     # Convierte texto estilo Markdown a HTML seguro, manejando bloques de código.
     import re as _re, html as _html
@@ -1044,6 +1066,14 @@ def render_safe_markdownish(md_text: str) -> str:
         text = text.replace(code, f"@@BLOCK{len(blocks)-1}@@")
 
     text = _html.escape(text) #convierte todo en texto plano
+
+    # --- NUEVO: Markdown inline básico seguro ---
+    # Aquí convertimos **negritas** y *cursivas* a <strong> y <em> sobre el TEXTO YA ESCAPADO,
+    # de modo que el contenido interno siga siendo seguro (solo permitimos estas etiquetas).
+    # Nota: evitamos tocar los bloques de código porque están en placeholders @@BLOCKN@@.
+    text = _re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)  # **bold**
+    text = _re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)  # *italic* (sin confundir con **)
+
     for i, block_html in enumerate(blocks): 
         text = text.replace(f"@@BLOCK{i}@@", block_html)
     return text
@@ -1082,6 +1112,7 @@ def _ensure_state(sess):
     sess.trainer.setdefault("activo", False)
     sess.trainer.setdefault("paso", 0)
     sess.trainer.setdefault("historial", [])
+    sess.trainer.setdefault("strikes", 0)  # nuevo contador para respuestas pobres
 
     # Verifica si la sesión tiene un atributo 'trainer_ps_id'
     # Si no lo tiene, lo crea y lo inicializa en None
@@ -1171,6 +1202,7 @@ class ApiChat:
             state["activo"] = False
             state["paso"] = 0
             state["historial"] = []
+            state["strikes"] = 0  # <--- reinicia strikes al limpiar
             session.trainer_ps_id = None
             return json.dumps({"respuesta": "🗑️ Chat reiniciado.", "limpiar": True})
 
@@ -1189,6 +1221,7 @@ Comandos disponibles:
             state["activo"] = True
             state["paso"] = 0
             state["historial"] = []
+            state["strikes"] = 0  # <--- reinicia strikes al iniciar quiz
 
             id_ps = None
             if getattr(session, "usuario_id", None):
@@ -1246,8 +1279,32 @@ Comandos disponibles:
             return safe_json(f"{respuesta_raw}\n\nAhora retomemos: {TRAINER_QUESTIONS[paso]}")
 
         if paso < len(TRAINER_QUESTIONS):
+            # --- NUEVO: validación de la respuesta del usuario ANTES de avanzar de paso ---
+            if _is_poor_answer(msg):
+                state["strikes"] += 1
+                # si acumula 3 strikes, reseteamos el cuestionario
+                if state["strikes"] >= 3:
+                    state["activo"] = False
+                    state["paso"] = 0
+                    state["historial"] = []
+                    session.trainer_ps_id = None
+                    return safe_json(
+                        "⚠️ He notado varias respuestas demasiado cortas.\n"
+                        "¿**Estás seguro que estás aprendiendo**?\n\n"
+                        "Vamos a **repetir el cuestionario**. Escribe `/quiz` para empezar de nuevo."
+                    )
+                # si no llega al límite, re-preguntamos el mismo paso
+                return safe_json(
+                    "Tu respuesta quedó muy breve o tipo sí/no.\n"
+                    "¿**Estás seguro que estás aprendiendo**?\n\n"
+                    "Intenta de nuevo con **más detalle** (qué, por qué y cómo):\n\n"
+                    f"{TRAINER_QUESTIONS[paso]}"
+                )
+
+            # respuesta aceptable: registramos y avanzamos
             num_preg = paso + 1
             state["historial"].append({"q": TRAINER_QUESTIONS[paso], "a": msg})
+            state["strikes"] = 0  # reinicia strikes al recibir respuesta buena
 
             if session.trainer_ps_id and getattr(session, "usuario_id", None):
                 try:
@@ -1312,7 +1369,7 @@ def _to_ymd(value):
             except Exception:
                 continue
     return None
-
+    
 class Estadisticas:
     def _build_stats(self, id_usuario: int):
         con = get_db()
